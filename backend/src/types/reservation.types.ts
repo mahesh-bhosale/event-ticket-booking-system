@@ -23,6 +23,8 @@ export interface IReservation {
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  bookingReference?: string | null;
+  bookedAt?: Date | null;
 }
 
 // ── DTO shapes ────────────────────────────────────────────────

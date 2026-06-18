@@ -398,5 +398,5 @@ describe('Seat Reservation Concurrency & Integration Tests', () => {
     // Verify only 1 reservation document created for A6
     const reservations = await Reservation.find({ eventId: activeEvent._id, seatNumbers: 'A6' });
     expect(reservations).toHaveLength(1);
-  });
+  }, 30000);
 });

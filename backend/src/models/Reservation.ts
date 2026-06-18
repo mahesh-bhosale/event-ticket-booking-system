@@ -66,6 +66,18 @@ const reservationSchema = new Schema<ReservationDocument, ReservationModel>(
         message: 'expiresAt must be a future date',
       },
     },
+
+    bookingReference: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+
+    bookedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

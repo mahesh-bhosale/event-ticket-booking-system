@@ -30,10 +30,11 @@ router.use('/events', eventRouter);
 import { reservationRouter } from './reservationRoutes';
 router.use('/reserve', reservationRouter);
 
+import { bookingRouter } from './bookingRoutes';
+router.use('/bookings', bookingRouter);
+
 // Future routes (uncomment as features are implemented):
-// import { bookingRouter } from './bookingRoutes';
 // import { userRouter } from './userRoutes';
-// router.use('/bookings', bookingRouter);
 // router.use('/users', userRouter);
 
 export default router;
