@@ -60,6 +60,7 @@ app.set('trust proxy', 1);
 
 // ── 8. API Routes ─────────────────────────────────────────────
 app.use('/api/v1', apiRouter);
+app.use('/api', apiRouter);
 
 // ── 9. 404 Handler ────────────────────────────────────────────
 app.use(notFound);

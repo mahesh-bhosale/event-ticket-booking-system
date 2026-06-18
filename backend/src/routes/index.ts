@@ -24,11 +24,12 @@ router.get('/health', (_req, res) => {
 // ── Domain Routes ─────────────────────────────────────────────
 router.use('/auth', authRouter);
 
+import { eventRouter } from './eventRoutes';
+router.use('/events', eventRouter);
+
 // Future routes (uncomment as features are implemented):
-// import { eventRouter } from './eventRoutes';
 // import { bookingRouter } from './bookingRoutes';
 // import { userRouter } from './userRoutes';
-// router.use('/events', eventRouter);
 // router.use('/bookings', bookingRouter);
 // router.use('/users', userRouter);
 

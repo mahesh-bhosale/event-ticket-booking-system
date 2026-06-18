@@ -1,0 +1,392 @@
+{
+  "info": {
+    "name": "SortMyScene Events API",
+    "_postman_id": "sortmyscene-events-v1",
+    "description": "API collection for testing public read-only event endpoints in SortMyScene booking platform.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get all events (Default page=1, limit=10)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response format is valid success payload\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.have.property(\"events\");",
+              "    pm.expect(response.data).to.have.property(\"pagination\");",
+              "    pm.expect(response.data.events).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"Save event ID for subsequent tests\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.success && response.data.events.length > 0) {",
+              "        pm.collectionVariables.set(\"event_id\", response.data.events[0]._id);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events"
+          ]
+        },
+        "description": "Fetches all active events using defaults: page=1, limit=10. Stores the first event ID as a variable."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get events with pagination (page=1, limit=5)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Pagination limits output to 5 items\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.data.events.length).to.be.at.most(5);",
+              "    pm.expect(response.data.pagination.limit).to.eql(5);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events?page=1&limit=5",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Verify pagination features work and respects 'limit' parameter."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get events with date filter (e.g. YYYY-MM-DD)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Returns events matching date\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    response.data.events.forEach(function(event) {",
+              "        const eventDate = event.dateTime.split('T')[0];",
+              "        pm.expect(eventDate).to.eql(\"2026-07-02\");",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events?date=2026-07-02",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-07-02"
+            }
+          ]
+        },
+        "description": "Fetch events taking place on a particular date. (Note: adjust date query based on current seed date)."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get event by id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains details and seat array\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.have.property(\"event\");",
+              "    pm.expect(response.data).to.have.property(\"seats\");",
+              "    pm.expect(response.data.seats).to.be.an(\"array\");",
+              "});",
+              "",
+              "pm.test(\"Seats conform to layout rules and do not expose sensitive fields\", function () {",
+              "    const response = pm.response.json();",
+              "    if (response.data.seats.length > 0) {",
+              "        const seat = response.data.seats[0];",
+              "        pm.expect(seat).to.have.property(\"_id\");",
+              "        pm.expect(seat).to.have.property(\"seatNumber\");",
+              "        pm.expect(seat).to.have.property(\"row\");",
+              "        pm.expect(seat).to.have.property(\"number\");",
+              "        pm.expect(seat).to.have.property(\"status\");",
+              "        ",
+              "        pm.expect(seat).to.not.have.property(\"reservedBy\");",
+              "        pm.expect(seat).to.not.have.property(\"reservedAt\");",
+              "        pm.expect(seat).to.not.have.property(\"reservationId\");",
+              "        ",
+              "        // status must be lowercase in response",
+              "        pm.expect(seat.status).to.match(/^(available|reserved|booked)$/);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events/{{event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events",
+            "{{event_id}}"
+          ]
+        },
+        "description": "Fetch details and seat layout of a specific event using the event_id saved dynamically from previous tests."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Invalid ObjectId",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error message is 'Invalid event id'\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.false;",
+              "    pm.expect(response.message).to.eql(\"Invalid event id\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events/invalid-object-id-123",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events",
+            "invalid-object-id-123"
+          ]
+        },
+        "description": "Assert that request fails with 400 Bad Request if the event ID is structurally invalid."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Event not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error message is 'Event not found'\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.false;",
+              "    pm.expect(response.message).to.eql(\"Event not found\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events/507f1f77bcf86cd799439011",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events",
+            "507f1f77bcf86cd799439011"
+          ]
+        },
+        "description": "Assert that requesting a valid but non-existent event ID returns 404 Not Found."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Inactive event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 410\", function () {",
+              "    pm.response.to.have.status(410);",
+              "});",
+              "",
+              "pm.test(\"Error message is 'Event is no longer available'\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.false;",
+              "    pm.expect(response.message).to.eql(\"Event is no longer available\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events/{{inactive_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events",
+            "{{inactive_event_id}}"
+          ]
+        },
+        "description": "Assert that request fails with 410 Gone for events that are inactive (isActive=false)."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Empty seat list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Returns event details with empty seats list\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.have.property(\"event\");",
+              "    pm.expect(response.data).to.have.property(\"seats\");",
+              "    pm.expect(response.data.seats).to.be.an(\"array\").that.is.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/events/{{empty_seat_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "events",
+            "{{empty_seat_event_id}}"
+          ]
+        },
+        "description": "Assert that an event with no associated seats returns successfully with an empty seats list."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "event_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inactive_event_id",
+      "value": "667104b90000000000000001",
+      "type": "string"
+    },
+    {
+      "key": "empty_seat_event_id",
+      "value": "667104b90000000000000002",
+      "type": "string"
+    }
+  ]
+}
