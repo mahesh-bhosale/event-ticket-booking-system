@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEvent } from '../hooks/useEvent';
 import { useReserveSeats } from '../hooks/useReserveSeats';
 import { useConfirmBooking } from '../hooks/useConfirmBooking';
@@ -9,16 +10,19 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, MapPin, Armchair, ChevronLeft, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Armchair, ChevronLeft, CheckCircle, AlertTriangle } from 'lucide-react';
 import { SeatGrid } from '../components/seats/SeatGrid';
 import { SeatLegend } from '../components/seats/SeatLegend';
 import { SeatGridSkeleton } from '../components/seats/SeatGridSkeleton';
+import { ReservationTimer } from '../components/booking/ReservationTimer';
 import { Seat } from '../types/seat.types';
+import { toast } from 'sonner';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const eventId = id ?? '';
+  const queryClient = useQueryClient();
 
   // ── Selection State Hook ──────────────────────────────────
   const {
@@ -28,12 +32,12 @@ export default function EventDetailPage() {
     selectedCount,
   } = useSeatSelection();
 
-  // ── Local Reservation States ──────────────────────────────
-  const [reservation, setReservation] = useState<{
+  // ── Active Reservation States ─────────────────────────────
+  const [activeReservation, setActiveReservation] = useState<{
     id: string;
-    expiresAt: Date;
+    expiresAt: string;
   } | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // ── Queries & Mutations ───────────────────────────────────
@@ -48,26 +52,6 @@ export default function EventDetailPage() {
   // Seat Price calculation details
   const ticketPrice = (event as { price?: number } | undefined)?.price ?? 450;
   const totalPrice = ticketPrice * selectedCount;
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (!reservation) return;
-
-    const timer = setInterval(() => {
-      const remaining = Math.max(0, Math.floor((reservation.expiresAt.getTime() - Date.now()) / 1000));
-      setTimeLeft(remaining);
-
-      if (remaining <= 0) {
-        clearInterval(timer);
-        // Reset reservation & selection state on timeout
-        setReservation(null);
-        clearSelection();
-        setErrorMsg('Your seat reservation has expired. Please select seats and try again.');
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [reservation, clearSelection]);
 
   // Loading skeleton state
   if (isLoading) {
@@ -155,8 +139,22 @@ export default function EventDetailPage() {
 
   const handleToggleSeat = (seat: Seat) => {
     // Selection is frozen during active holds/checkout countdowns
-    if (reservation) return;
+    if (activeReservation) return;
+    setIsExpired(false); // Reset expired warning state when starting a new selection
     toggleSeat(seat);
+  };
+
+  const handleReservationExpired = () => {
+    // 1. Clear selected seats
+    clearSelection();
+    // 2. Remove active reservation state
+    setActiveReservation(null);
+    // 3. Mark expiration flag to show alert
+    setIsExpired(true);
+    // 4. Force refetch event/seat data immediately
+    queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+    // Invalidate main event list too as availability shifts
+    queryClient.invalidateQueries({ queryKey: ['events'] });
   };
 
   const handleReserve = async () => {
@@ -174,11 +172,12 @@ export default function EventDetailPage() {
       });
 
       if (res.success && res.data) {
-        setReservation({
+        setActiveReservation({
           id: res.data.reservationId,
-          expiresAt: new Date(res.data.expiresAt),
+          expiresAt: res.data.expiresAt,
         });
-        setTimeLeft(res.data.expiresInSeconds);
+        setIsExpired(false);
+        toast.success("Seats reserved successfully");
       }
     } catch (err) {
       setErrorMsg(getApiErrorMessage(err));
@@ -186,12 +185,12 @@ export default function EventDetailPage() {
   };
 
   const handleConfirm = async () => {
-    if (!reservation) return;
+    if (!activeReservation) return;
     setErrorMsg(null);
 
     try {
       const res = await confirmBookingMutation.mutateAsync({
-        reservationId: reservation.id,
+        reservationId: activeReservation.id,
       });
 
       if (res.success && res.data) {
@@ -207,16 +206,10 @@ export default function EventDetailPage() {
   };
 
   const handleCancelReservation = () => {
-    setReservation(null);
+    setActiveReservation(null);
     clearSelection();
+    setIsExpired(false);
     setErrorMsg(null);
-  };
-
-  // Format countdown timer text (e.g. 05:42)
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
   return (
@@ -270,7 +263,7 @@ export default function EventDetailPage() {
                 seats={seats}
                 selectedSeats={selectedSeats}
                 onToggleSeat={handleToggleSeat}
-                disabled={!!reservation}
+                disabled={!!activeReservation}
               />
             </CardContent>
           </Card>
@@ -317,16 +310,13 @@ export default function EventDetailPage() {
               </div>
 
               {/* Booking Checkout hold countdown or actions */}
-              {reservation ? (
+              {activeReservation ? (
                 // Seat Hold State - active checkout countdown
                 <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900 space-y-4">
-                  <div className="flex items-center justify-between text-sm font-bold text-amber-700 dark:text-amber-300">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-amber-500 animate-pulse" />
-                      <span>Seats Held For:</span>
-                    </div>
-                    <span className="font-mono text-base">{formatTime(timeLeft)}</span>
-                  </div>
+                  <ReservationTimer
+                    expiresAt={activeReservation.expiresAt}
+                    onExpired={handleReservationExpired}
+                  />
 
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Your seats have been temporarily locked. Please click "Confirm Booking" to finalize your purchase before the countdown runs out.
@@ -342,6 +332,11 @@ export default function EventDetailPage() {
                       onClick={handleConfirm}
                       className="w-full font-bold bg-green-600 hover:bg-green-700 text-white border-green-500 shadow-lg shadow-green-600/10"
                       isLoading={confirmBookingMutation.isPending}
+                      disabled={
+                        !activeReservation ||
+                        isExpired ||
+                        confirmBookingMutation.isPending
+                      }
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Confirm Booking
@@ -359,6 +354,16 @@ export default function EventDetailPage() {
               ) : (
                 // Dynamic selection actions summary
                 <div className="space-y-4">
+                  {isExpired && (
+                    <Alert variant="destructive" className="animate-in slide-in-from-top duration-300">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle className="font-bold text-xs">Reservation Expired</AlertTitle>
+                      <AlertDescription className="text-xs">
+                        Your reservation has expired. Please select seats again.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="flex flex-col gap-2.5 pt-4 border-t border-border/40 text-sm font-semibold">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Selected Count:</span>
