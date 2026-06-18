@@ -1,11 +1,11 @@
-import type { Request, Response, NextFunction } from 'express';
-import { ApiError } from '../utils/ApiError';
+import type { Request, Response } from 'express';
 
 // ─────────────────────────────────────────────────────────────
-//  404 Not Found — Must be registered AFTER all routes
+//  404 Not Found — Registered AFTER all route maps
 // ─────────────────────────────────────────────────────────────
-export function notFound(req: Request, _res: Response, next: NextFunction): void {
-  next(
-    ApiError.notFound(`Cannot ${req.method} ${req.originalUrl}`),
-  );
+export function notFound(_req: Request, res: Response): void {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  });
 }

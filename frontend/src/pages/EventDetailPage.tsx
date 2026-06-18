@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEventDetails } from '../hooks/useEventDetails';
-import { useReservation } from '../hooks/useReservation';
+import { useReservation, SeatConflictError } from '../hooks/useReservation';
 import { useSeatSelection } from '../hooks/useSeatSelection';
 import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -24,6 +24,7 @@ export default function EventDetailPage() {
   const {
     selectedSeats,
     toggleSeat,
+    deselectSeats,
     clearSelection,
     selectedCount,
   } = useSeatSelection();
@@ -41,9 +42,10 @@ export default function EventDetailPage() {
 
   // ── Local Errors State ───────────────────────────────────
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [conflictMsg, setConflictMsg] = useState<string | null>(null);
 
   // ── Event Details Hook with Polling Conditional ───────────
-  const { event, seats, isLoading, error } = useEventDetails(eventId, !!reservation);
+  const { event, seats, isLoading, error, refetch } = useEventDetails(eventId, !!reservation);
 
   // Seat Price calculation details
   const ticketPrice = (event as { price?: number } | undefined)?.price ?? 450;
@@ -137,6 +139,7 @@ export default function EventDetailPage() {
     // Selection is frozen during active holds/checkout countdowns
     if (reservation) return;
     resetExpired(); // Reset expired warning state when starting a new selection
+    setConflictMsg(null);
     toggleSeat(seat);
   };
 
@@ -150,6 +153,7 @@ export default function EventDetailPage() {
   const handleReserve = async () => {
     if (selectedSeats.length === 0) return;
     setErrorMsg(null);
+    setConflictMsg(null);
 
     // Generate unique idempotency key for seat reservation
     const idempotencyKey = crypto.randomUUID();
@@ -157,7 +161,13 @@ export default function EventDetailPage() {
     try {
       await reserveSeats(eventId, selectedSeats, idempotencyKey);
     } catch (err) {
-      setErrorMsg(getApiErrorMessage(err));
+      if (err instanceof SeatConflictError) {
+        deselectSeats(err.unavailableSeats);
+        refetch();
+        setConflictMsg(`These seats are no longer available: ${err.unavailableSeats.join(', ')}`);
+      } else {
+        setErrorMsg(getApiErrorMessage(err));
+      }
     }
   };
 
@@ -176,6 +186,7 @@ export default function EventDetailPage() {
     clearReservation(false); // Do not show expired alert on manual cancellations
     clearSelection();
     setErrorMsg(null);
+    setConflictMsg(null);
   };
 
   return (
@@ -251,6 +262,14 @@ export default function EventDetailPage() {
                 <Alert variant="destructive">
                   <AlertTitle className="font-bold text-xs">Error</AlertTitle>
                   <AlertDescription className="text-xs">{errorMsg}</AlertDescription>
+                </Alert>
+              )}
+ 
+              {conflictMsg && (
+                <Alert variant="destructive" className="animate-in slide-in-from-top duration-300">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle className="font-bold text-xs">Seat Selection Conflict</AlertTitle>
+                  <AlertDescription className="text-xs">{conflictMsg}</AlertDescription>
                 </Alert>
               )}
 

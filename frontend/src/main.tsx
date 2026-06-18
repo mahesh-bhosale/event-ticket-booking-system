@@ -5,6 +5,7 @@ import { queryClient } from './query/queryClient';
 import { AuthProvider } from './context/AuthContext';
 import { BrowserRouter } from 'react-router-dom';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import Toaster from './components/ui/sonner';
 import App from './App';
 import './index.css';
 
@@ -21,6 +22,7 @@ createRoot(rootElement).render(
         <BrowserRouter>
           <ErrorBoundary>
             <App />
+            <Toaster richColors position="top-right" closeButton />
           </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,9 +8,17 @@ import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Ticket } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '../components/ui/form';
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -30,17 +38,21 @@ export default function LoginPage() {
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
 
   // React to already authenticated users
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormValues>({
+  // Check if routed due to session expiration
+  useEffect(() => {
+    if (sessionStorage.getItem('show_expired_toast') === 'true') {
+      sessionStorage.removeItem('show_expired_toast');
+      toast.error('Your session has expired. Please login again.');
+    }
+  }, []);
+
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
@@ -64,6 +76,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        
+        {/* App Logo Branding */}
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="p-3 rounded-2xl bg-primary text-primary-foreground shadow-md animate-bounce">
             <Ticket className="h-6 w-6" />
@@ -76,58 +90,70 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="border border-border/40 shadow-xl">
+        {/* Login Card */}
+        <Card className="border border-border/40 shadow-xl bg-card/45 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl font-bold">Welcome Back</CardTitle>
             <CardDescription>Enter your email and password to access your account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              {errorMsg && (
-                <Alert variant="destructive">
-                  <AlertTitle className="font-bold">Login Failed</AlertTitle>
-                  <AlertDescription>{errorMsg}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  {...register('email')}
-                />
-                {errors.email && (
-                  <p className="text-xs font-semibold text-destructive">{errors.email.message}</p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+                {errorMsg && (
+                  <Alert variant="destructive">
+                    <AlertTitle className="font-bold">Login Failed</AlertTitle>
+                    <AlertDescription>{errorMsg}</AlertDescription>
+                  </Alert>
                 )}
-              </div>
 
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  {...register('password')}
+                {/* Email Field */}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="you@example.com"
+                          autoComplete="email"
+                          type="email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {errors.password && (
-                  <p className="text-xs font-semibold text-destructive">{errors.password.message}</p>
-                )}
-              </div>
 
-              <Button type="submit" className="w-full mt-2 font-bold" isLoading={isSubmitting}>
-                Sign In
-              </Button>
-            </form>
+                {/* Password Field */}
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          type="password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Submit button with loader */}
+                <Button type="submit" className="w-full mt-2 font-bold" isLoading={isSubmitting}>
+                  Sign In
+                </Button>
+              </form>
+            </Form>
           </CardContent>
-          <CardFooter className="flex justify-center border-t py-4">
+          <CardFooter className="flex justify-center border-t py-4 border-border/40">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{' '}
               <Link to="/register" className="text-primary font-semibold hover:underline">

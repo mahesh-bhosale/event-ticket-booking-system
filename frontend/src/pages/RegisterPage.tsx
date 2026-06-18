@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,14 +8,25 @@ import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Ticket } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '../components/ui/form';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string().min(1, 'Name is required'),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z
+    .string()
+    .min(6, 'Password too short')
+    .regex(/[A-Z]/, 'Password must contain uppercase letter')
+    .regex(/[0-9]/, 'Password must contain number'),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -27,17 +38,13 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // React to already authenticated users
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormValues>({
+  const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
@@ -62,6 +69,8 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        
+        {/* App Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="p-3 rounded-2xl bg-primary text-primary-foreground shadow-md animate-bounce">
             <Ticket className="h-6 w-6" />
@@ -74,71 +83,90 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <Card className="border border-border/40 shadow-xl">
+        {/* Register Card */}
+        <Card className="border border-border/40 shadow-xl bg-card/45 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl font-bold">Create Account</CardTitle>
             <CardDescription>Enter details below to sign up for a new account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              {errorMsg && (
-                <Alert variant="destructive">
-                  <AlertTitle className="font-bold">Registration Failed</AlertTitle>
-                  <AlertDescription>{errorMsg}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  autoComplete="name"
-                  className={errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  {...register('name')}
-                />
-                {errors.name && (
-                  <p className="text-xs font-semibold text-destructive">{errors.name.message}</p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+                {errorMsg && (
+                  <Alert variant="destructive">
+                    <AlertTitle className="font-bold">Registration Failed</AlertTitle>
+                    <AlertDescription>{errorMsg}</AlertDescription>
+                  </Alert>
                 )}
-              </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  {...register('email')}
+                {/* Name Field */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="John Doe"
+                          autoComplete="name"
+                          type="text"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {errors.email && (
-                  <p className="text-xs font-semibold text-destructive">{errors.email.message}</p>
-                )}
-              </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  {...register('password')}
+                {/* Email Field */}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="you@example.com"
+                          autoComplete="email"
+                          type="email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {errors.password && (
-                  <p className="text-xs font-semibold text-destructive">{errors.password.message}</p>
-                )}
-              </div>
 
-              <Button type="submit" className="w-full mt-2 font-bold" isLoading={isSubmitting}>
-                Sign Up
-              </Button>
-            </form>
+                {/* Password Field */}
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1.5">
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                          type="password"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Submit button with loader */}
+                <Button type="submit" className="w-full mt-2 font-bold" isLoading={isSubmitting}>
+                  Sign Up
+                </Button>
+              </form>
+            </Form>
           </CardContent>
-          <CardFooter className="flex justify-center border-t py-4">
+          <CardFooter className="flex justify-center border-t py-4 border-border/40">
             <p className="text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link to="/login" className="text-primary font-semibold hover:underline">

@@ -51,6 +51,9 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => { window.location.href = '/'; }}>
+                Go Home
+              </Button>
               <Button onClick={this.handleRetry}>
                 Try Again
               </Button>

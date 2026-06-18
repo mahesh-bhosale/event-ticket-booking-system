@@ -3,6 +3,7 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
+import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 
 // ─────────────────────────────────────────────────────────────
 //  Constants
@@ -51,22 +52,34 @@ apiClient.interceptors.request.use(
 );
 
 // ─────────────────────────────────────────────────────────────
-//  Response Interceptor — Handle 401 Unauthorized
+//  Response Interceptor — Handle Errors and 401s
 // ─────────────────────────────────────────────────────────────
 apiClient.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => response,
   (error: unknown) => {
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401
-    ) {
-      // Clear stale token
-      tokenStorage.remove();
-      // Redirect to login (avoid circular imports — use window directly)
-      const currentPath = window.location.pathname;
-      if (currentPath !== '/login') {
-        window.location.replace(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+
+      // Handle 401 Session Expiration
+      if (status === 401) {
+        // Clear active session states from localStorage
+        tokenStorage.remove();
+        localStorage.removeItem('sortmyscene_user');
+        localStorage.removeItem('sortmyscene_refresh_token');
+        sessionStorage.removeItem('sortmyscene_reservation');
+
+        // Set session expiration toast redirect flag in sessionStorage
+        sessionStorage.setItem('show_expired_toast', 'true');
+
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login') {
+          // Force redirect to login page
+          window.location.replace(`/login?redirect=${encodeURIComponent(currentPath)}`);
+        }
       }
+
+      // Convert server error payload to user-friendly text message and bind to error object
+      error.message = getApiErrorMessage(error);
     }
     return Promise.reject(error);
   },

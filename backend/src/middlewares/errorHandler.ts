@@ -3,17 +3,11 @@ import { ApiError } from '../utils/ApiError';
 import { logger } from '../utils/logger';
 import { env } from '../config/env';
 
-// ─────────────────────────────────────────────────────────────
-//  Types
-// ─────────────────────────────────────────────────────────────
 interface MongoError extends Error {
   code?: number;
   keyValue?: Record<string, unknown>;
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Error Handler Middleware
-// ─────────────────────────────────────────────────────────────
 export function errorHandler(
   err: Error,
   req: Request,
@@ -21,93 +15,83 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction,
 ): void {
-  // ── Log every error ──────────────────────────────────────
+  const isProduction = env.NODE_ENV === 'production';
+
+  // Log all errors internally
   logger.error(`${req.method} ${req.originalUrl} → ${err.message}`, {
-    stack: env.NODE_ENV === 'development' ? err.stack : undefined,
+    stack: !isProduction ? err.stack : undefined,
     body: req.body as unknown,
     params: req.params,
     query: req.query,
   });
 
-  // ── Operational ApiError (safe to expose) ────────────────
+  // 1. Operational ApiError (developer-safe messages)
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
       success: false,
-      statusCode: err.statusCode,
       message: err.message,
       errors: err.errors,
-      ...(env.NODE_ENV === 'development' ? { stack: err.stack } : {}),
+      ...(!isProduction ? { stack: err.stack } : {}),
     });
     return;
   }
 
-  // ── Mongoose Duplicate Key ────────────────────────────────
+  // 2. Mongoose Duplicate Key Error (11000)
   const mongoErr = err as MongoError;
   if (mongoErr.code === 11000) {
-    logger.error('Duplicate key error conflict:', {
-      message: mongoErr.message,
-      keyValue: mongoErr.keyValue,
-      index: (mongoErr as any).indexName || 'unknown_index',
-    });
-
+    const offendingField = mongoErr.keyValue ? Object.keys(mongoErr.keyValue)[0] : 'unknown';
     res.status(409).json({
       success: false,
-      message: 'Duplicate resource conflict',
+      message: 'Resource already exists',
+      errors: [offendingField], // Always include offending field
     });
     return;
   }
 
-  // ── Mongoose Validation Error ─────────────────────────────
+  // 3. Mongoose Validation Error (ValidationError)
   if (err.name === 'ValidationError') {
-    res.status(422).json({
+    const mongooseErr = err as any;
+    // Extract validation error messages
+    const validationErrors = Object.values(mongooseErr.errors || {}).map((e: any) => e.message);
+    res.status(400).json({
       success: false,
-      statusCode: 422,
       message: 'Validation failed',
-      errors: [err.message],
+      errors: validationErrors.length > 0 ? validationErrors : [err.message],
     });
     return;
   }
 
-  // ── Mongoose CastError (bad ObjectId) ────────────────────
+  // 4. Mongoose CastError (Bad ObjectId)
   if (err.name === 'CastError') {
     res.status(400).json({
       success: false,
-      statusCode: 400,
-      message: 'Invalid ID format',
-      errors: [err.message],
+      message: 'Invalid resource identifier',
     });
     return;
   }
 
-  // ── JWT Errors ────────────────────────────────────────────
-  if (err.name === 'JsonWebTokenError') {
-    res.status(401).json({
-      success: false,
-      statusCode: 401,
-      message: 'Invalid token',
-      errors: [err.message],
-    });
-    return;
-  }
-
+  // 5. JWT Expiration Error (TokenExpiredError)
   if (err.name === 'TokenExpiredError') {
     res.status(401).json({
       success: false,
-      statusCode: 401,
-      message: 'Token expired',
-      errors: [],
+      message: 'Session expired. Please login again.',
     });
     return;
   }
 
-  // ── Unknown / Unexpected Errors ───────────────────────────
+  // 6. JWT Invalid Error (JsonWebTokenError)
+  if (err.name === 'JsonWebTokenError') {
+    res.status(401).json({
+      success: false,
+      message: 'Invalid authentication token.',
+    });
+    return;
+  }
+
+  // 7. Unknown/Fallback Internal Errors
   res.status(500).json({
     success: false,
-    statusCode: 500,
-    message: 'Internal server error',
-    errors: [],
-    ...(env.NODE_ENV === 'development'
-      ? { detail: err.message, stack: err.stack }
-      : {}),
+    message: isProduction ? 'Something went wrong' : err.message,
+    ...(!isProduction ? { stack: err.stack } : {}),
   });
 }

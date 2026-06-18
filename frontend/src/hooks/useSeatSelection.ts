@@ -36,6 +36,14 @@ export function useSeatSelection(initialSelected: string[] = []): SeatSelectionH
     });
   }, []);
 
+  const deselectSeats = useCallback((seatNumbers: string[]) => {
+    setSelectedSet((prev) => {
+      const next = new Set(prev);
+      seatNumbers.forEach((num) => next.delete(num));
+      return next;
+    });
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedSet(new Set());
   }, []);
@@ -43,6 +51,7 @@ export function useSeatSelection(initialSelected: string[] = []): SeatSelectionH
   return {
     selectedSeats,
     toggleSeat,
+    deselectSeats,
     clearSelection,
     isSelected,
     canSelectMore,

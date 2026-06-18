@@ -29,6 +29,7 @@ export interface SeatGridProps {
 export interface SeatSelectionHook {
   selectedSeats: string[];
   toggleSeat: (seat: Seat) => void;
+  deselectSeats: (seatNumbers: string[]) => void;
   clearSelection: () => void;
   isSelected: (seatNumber: string) => boolean;
   canSelectMore: boolean;

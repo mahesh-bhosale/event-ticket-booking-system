@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { reserveSeatsApi } from '../api/reservations';
 import { confirmBookingApi } from '../api/bookings';
 import { queryKeys } from '../constants/queryKeys';
@@ -10,6 +11,17 @@ import { ReservationData } from '../types/reservation.types';
 import { SeatStatus } from '../types/seat.types';
 import type { ApiResponse } from '../types/index';
 import type { EventDetailsResult } from '../types/event.types';
+
+export class SeatConflictError extends Error {
+  public unavailableSeats: string[];
+
+  constructor(message: string, unavailableSeats: string[]) {
+    super(message);
+    this.name = 'SeatConflictError';
+    this.unavailableSeats = unavailableSeats;
+    Object.setPrototypeOf(this, SeatConflictError.prototype);
+  }
+}
 
 const RESERVATION_STORAGE_KEY = 'sortmyscene_reservation';
 
@@ -73,6 +85,14 @@ export function useReservation() {
         }
         return res;
       } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 409) {
+          const data = err.response?.data as { message?: string; data?: { unavailableSeats?: string[] } } | undefined;
+          const unavailableSeats = data?.data?.unavailableSeats ?? [];
+          throw new SeatConflictError(
+            data?.message || 'Some seats are no longer available',
+            unavailableSeats
+          );
+        }
         throw new Error(getApiErrorMessage(err));
       }
     },
@@ -112,7 +132,9 @@ export function useReservation() {
       if (context?.previousEventDetails) {
         queryClient.setQueryData(context.queryKey, context.previousEventDetails);
       }
-      toast.error(err.message);
+      if (!(err instanceof SeatConflictError)) {
+        toast.error(err.message);
+      }
     },
 
     onSuccess: (res, variables) => {
