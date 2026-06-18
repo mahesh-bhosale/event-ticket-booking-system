@@ -5,24 +5,7 @@
 /**
  * Standard API response envelope matching the backend's ApiResponse class.
  */
-export interface ApiResponse<T = null> {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: T;
-  errors?: string[];
-  meta?: PaginationMeta;
-}
-
-/**
- * Pagination metadata returned by list endpoints.
- */
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+export type { ApiResponse, PaginationMeta } from './api.types';
 
 /**
  * Generic async state for data fetching.

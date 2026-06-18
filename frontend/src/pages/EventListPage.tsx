@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useEvents } from '../hooks/useEvents';
+import { useEventList } from '../hooks/useEventList';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SkeletonGrid } from '../components/common/SkeletonGrid';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Armchair, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
@@ -13,26 +12,24 @@ export default function EventListPage() {
   const limit = 6;
   const [dateFilter, setDateFilter] = useState<string>('');
 
-  const { data: response, isLoading, isError, error, refetch, isFetching } = useEvents({
+  const { events, pagination, isLoading, error, refetch } = useEventList(
     page,
     limit,
-    date: dateFilter || undefined,
-  });
+    dateFilter || undefined
+  );
+
+  const isError = !!error;
+  const totalPages = pagination?.totalPages ?? 1;
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDateFilter(e.target.value);
-    setPage(1); // reset to page 1 on filter change
+    setPage(1); // Reset to page 1 on filter change
   };
 
   const handleClearFilter = () => {
     setDateFilter('');
     setPage(1);
   };
-
-  const events = response?.data?.events ?? [];
-  const meta = response?.meta;
-
-  const totalPages = meta?.totalPages ?? 1;
 
   return (
     <div className="space-y-8">
@@ -64,11 +61,11 @@ export default function EventListPage() {
             variant="ghost"
             size="icon"
             onClick={() => refetch()}
-            disabled={isLoading || isFetching}
+            disabled={isLoading}
             title="Refresh list"
             aria-label="Refresh list"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
@@ -79,7 +76,7 @@ export default function EventListPage() {
       ) : isError ? (
         <Alert variant="destructive">
           <AlertTitle className="font-bold">Error Loading Events</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : events.length === 0 ? (
         <div className="text-center py-16 border rounded-lg bg-card/50">

@@ -6,6 +6,22 @@ import axios from 'axios';
  */
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    
+    // Centralized custom error status mapping
+    if (status === 401) {
+      return "Please login again";
+    }
+    if (status === 409) {
+      return "Selected seats are no longer available";
+    }
+    if (status === 410) {
+      return "Reservation expired";
+    }
+    if (status === 500) {
+      return "Something went wrong";
+    }
+
     const data = error.response?.data as { message?: string; errors?: string[] } | undefined;
     if (data?.message) {
       return data.message;

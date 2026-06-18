@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEvent } from '../hooks/useEvent';
-import { useReserveSeats } from '../hooks/useReserveSeats';
-import { useConfirmBooking } from '../hooks/useConfirmBooking';
+import { useEventDetails } from '../hooks/useEventDetails';
+import { useReservation } from '../hooks/useReservation';
 import { useSeatSelection } from '../hooks/useSeatSelection';
 import { getApiErrorMessage } from '../utils/getApiErrorMessage';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -16,13 +14,11 @@ import { SeatLegend } from '../components/seats/SeatLegend';
 import { SeatGridSkeleton } from '../components/seats/SeatGridSkeleton';
 import { ReservationTimer } from '../components/booking/ReservationTimer';
 import { Seat } from '../types/seat.types';
-import { toast } from 'sonner';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const eventId = id ?? '';
-  const queryClient = useQueryClient();
 
   // ── Selection State Hook ──────────────────────────────────
   const {
@@ -32,22 +28,22 @@ export default function EventDetailPage() {
     selectedCount,
   } = useSeatSelection();
 
-  // ── Active Reservation States ─────────────────────────────
-  const [activeReservation, setActiveReservation] = useState<{
-    id: string;
-    expiresAt: string;
-  } | null>(null);
-  const [isExpired, setIsExpired] = useState<boolean>(false);
+  // ── Reservation Lifecycle Hook ────────────────────────────
+  const {
+    reservation,
+    reserveSeats,
+    confirmBooking,
+    clearReservation,
+    resetExpired,
+    isExpired,
+    isLoading: isReservationLoading,
+  } = useReservation();
+
+  // ── Local Errors State ───────────────────────────────────
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ── Queries & Mutations ───────────────────────────────────
-  const { data: response, isLoading, isError, error } = useEvent(eventId);
-  const reserveSeatsMutation = useReserveSeats();
-  const confirmBookingMutation = useConfirmBooking();
-
-  const event = response?.data?.event;
-  // Safely cast seats response items to our strict Seat type
-  const seats = (response?.data?.seats as unknown as Seat[]) ?? [];
+  // ── Event Details Hook with Polling Conditional ───────────
+  const { event, seats, isLoading, error } = useEventDetails(eventId, !!reservation);
 
   // Seat Price calculation details
   const ticketPrice = (event as { price?: number } | undefined)?.price ?? 450;
@@ -114,7 +110,7 @@ export default function EventDetailPage() {
   }
 
   // Error boundary layout
-  if (isError || !event) {
+  if (error || !event) {
     return (
       <div className="space-y-6">
         <Button variant="outline" size="sm" onClick={() => navigate('/')} className="gap-2 font-semibold">
@@ -122,7 +118,7 @@ export default function EventDetailPage() {
         </Button>
         <Alert variant="destructive">
           <AlertTitle className="font-bold">Error Loading Event Details</AlertTitle>
-          <AlertDescription>{getApiErrorMessage(error)}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
     );
@@ -139,22 +135,16 @@ export default function EventDetailPage() {
 
   const handleToggleSeat = (seat: Seat) => {
     // Selection is frozen during active holds/checkout countdowns
-    if (activeReservation) return;
-    setIsExpired(false); // Reset expired warning state when starting a new selection
+    if (reservation) return;
+    resetExpired(); // Reset expired warning state when starting a new selection
     toggleSeat(seat);
   };
 
   const handleReservationExpired = () => {
-    // 1. Clear selected seats
+    // Clear selection state
     clearSelection();
-    // 2. Remove active reservation state
-    setActiveReservation(null);
-    // 3. Mark expiration flag to show alert
-    setIsExpired(true);
-    // 4. Force refetch event/seat data immediately
-    queryClient.invalidateQueries({ queryKey: ['event', eventId] });
-    // Invalidate main event list too as availability shifts
-    queryClient.invalidateQueries({ queryKey: ['events'] });
+    // Clear reservation and set isExpired flag to true
+    clearReservation(true);
   };
 
   const handleReserve = async () => {
@@ -165,50 +155,26 @@ export default function EventDetailPage() {
     const idempotencyKey = crypto.randomUUID();
 
     try {
-      const res = await reserveSeatsMutation.mutateAsync({
-        eventId,
-        seatNumbers: selectedSeats,
-        idempotencyKey,
-      });
-
-      if (res.success && res.data) {
-        setActiveReservation({
-          id: res.data.reservationId,
-          expiresAt: res.data.expiresAt,
-        });
-        setIsExpired(false);
-        toast.success("Seats reserved successfully");
-      }
+      await reserveSeats(eventId, selectedSeats, idempotencyKey);
     } catch (err) {
       setErrorMsg(getApiErrorMessage(err));
     }
   };
 
   const handleConfirm = async () => {
-    if (!activeReservation) return;
+    if (!reservation) return;
     setErrorMsg(null);
 
     try {
-      const res = await confirmBookingMutation.mutateAsync({
-        reservationId: activeReservation.id,
-      });
-
-      if (res.success && res.data) {
-        // Navigate to success screen, passing booking detail state
-        navigate('/booking/success', {
-          state: { booking: res.data },
-          replace: true,
-        });
-      }
+      await confirmBooking(reservation.reservationId);
     } catch (err) {
       setErrorMsg(getApiErrorMessage(err));
     }
   };
 
   const handleCancelReservation = () => {
-    setActiveReservation(null);
+    clearReservation(false); // Do not show expired alert on manual cancellations
     clearSelection();
-    setIsExpired(false);
     setErrorMsg(null);
   };
 
@@ -263,7 +229,7 @@ export default function EventDetailPage() {
                 seats={seats}
                 selectedSeats={selectedSeats}
                 onToggleSeat={handleToggleSeat}
-                disabled={!!activeReservation}
+                disabled={!!reservation}
               />
             </CardContent>
           </Card>
@@ -310,11 +276,11 @@ export default function EventDetailPage() {
               </div>
 
               {/* Booking Checkout hold countdown or actions */}
-              {activeReservation ? (
+              {reservation ? (
                 // Seat Hold State - active checkout countdown
                 <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900 space-y-4">
                   <ReservationTimer
-                    expiresAt={activeReservation.expiresAt}
+                    expiresAt={reservation.expiresAt}
                     onExpired={handleReservationExpired}
                   />
 
@@ -331,11 +297,11 @@ export default function EventDetailPage() {
                     <Button
                       onClick={handleConfirm}
                       className="w-full font-bold bg-green-600 hover:bg-green-700 text-white border-green-500 shadow-lg shadow-green-600/10"
-                      isLoading={confirmBookingMutation.isPending}
+                      isLoading={isReservationLoading}
                       disabled={
-                        !activeReservation ||
+                        !reservation ||
                         isExpired ||
-                        confirmBookingMutation.isPending
+                        isReservationLoading
                       }
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
@@ -344,7 +310,7 @@ export default function EventDetailPage() {
                     <Button
                       variant="ghost"
                       onClick={handleCancelReservation}
-                      disabled={confirmBookingMutation.isPending}
+                      disabled={isReservationLoading}
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       Cancel Reservation
@@ -383,7 +349,7 @@ export default function EventDetailPage() {
                     onClick={handleReserve}
                     disabled={selectedSeats.length === 0}
                     className="w-full font-bold shadow-md"
-                    isLoading={reserveSeatsMutation.isPending}
+                    isLoading={isReservationLoading}
                   >
                     Reserve Seats
                   </Button>
