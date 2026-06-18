@@ -2,6 +2,8 @@
 //  Reservation Types & Enums
 // ─────────────────────────────────────────────────────────────
 import type { Types } from 'mongoose';
+import type { Request } from 'express';
+import type { AuthenticatedUser } from './auth.types';
 
 // ── Enum ─────────────────────────────────────────────────────
 export enum ReservationStatus {
@@ -31,3 +33,21 @@ export interface CreateReservationDTO {
   seatIds: Types.ObjectId[];
   expiresAt: Date;
 }
+
+// ── Request & Response Interfaces ─────────────────────────────
+export interface AuthenticatedRequest extends Request {
+  user?: AuthenticatedUser;
+}
+
+export interface ReserveSeatsInput {
+  eventId: string;
+  seatNumbers: string[];
+}
+
+export interface ReserveSeatsResult {
+  reservationId: string;
+  seatNumbers: string[];
+  expiresAt: Date;
+  expiresInSeconds: number;
+}
+

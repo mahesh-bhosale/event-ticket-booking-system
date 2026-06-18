@@ -27,6 +27,9 @@ router.use('/auth', authRouter);
 import { eventRouter } from './eventRoutes';
 router.use('/events', eventRouter);
 
+import { reservationRouter } from './reservationRoutes';
+router.use('/reserve', reservationRouter);
+
 // Future routes (uncomment as features are implemented):
 // import { bookingRouter } from './bookingRoutes';
 // import { userRouter } from './userRoutes';
