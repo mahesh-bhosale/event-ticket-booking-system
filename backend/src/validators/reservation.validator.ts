@@ -4,6 +4,16 @@ import Joi from 'joi';
 //  Schemas
 // ─────────────────────────────────────────────────────────────
 
+export const reservationIdParamSchema = Joi.object({
+  reservationId: Joi.string()
+    .pattern(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'reservationId must be a valid ObjectId',
+      'any.required': 'reservationId is required',
+    }),
+});
+
 export const reserveSeatsSchema = Joi.object({
   eventId: Joi.string()
     .pattern(/^[0-9a-fA-F]{24}$/)

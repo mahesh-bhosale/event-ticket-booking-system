@@ -34,10 +34,12 @@ export default function EventDetailPage() {
     reservation,
     reserveSeats,
     confirmBooking,
+    cancelReservation,
     clearReservation,
     resetExpired,
     isExpired,
     isLoading: isReservationLoading,
+    isCancelling,
   } = useReservation();
 
   // ── Local Errors State ───────────────────────────────────
@@ -162,9 +164,21 @@ export default function EventDetailPage() {
       await reserveSeats(eventId, selectedSeats, idempotencyKey);
     } catch (err) {
       if (err instanceof SeatConflictError) {
-        deselectSeats(err.unavailableSeats);
-        refetch();
-        setConflictMsg(`These seats are no longer available: ${err.unavailableSeats.join(', ')}`);
+        if (err.code === 'SEATS_UNAVAILABLE' && err.unavailableSeats.length > 0) {
+          deselectSeats(err.unavailableSeats);
+          refetch();
+          setConflictMsg(
+            `These seats are no longer available: ${err.unavailableSeats.join(', ')}`,
+          );
+        } else if (err.code === 'ACTIVE_RESERVATION') {
+          setConflictMsg(
+            'You still have an active reservation for this event. Cancel it first, then try again.',
+          );
+          refetch();
+        } else {
+          setConflictMsg(err.message);
+          refetch();
+        }
       } else {
         setErrorMsg(getApiErrorMessage(err));
       }
@@ -182,18 +196,26 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleCancelReservation = () => {
-    clearReservation(false); // Do not show expired alert on manual cancellations
-    clearSelection();
+  const handleCancelReservation = async () => {
     setErrorMsg(null);
     setConflictMsg(null);
+
+    try {
+      await cancelReservation();
+      clearSelection();
+    } catch (err) {
+      setErrorMsg(getApiErrorMessage(err));
+    }
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Decorative background glow */}
+      <div className="absolute top-10 right-10 w-72 h-72 bg-brand-purple/10 rounded-full blur-[100px] -z-10" />
+
       {/* Back Button */}
       <div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/')} className="gap-2 font-semibold">
+        <Button variant="outline" size="sm" onClick={() => navigate('/')} className="gap-2 font-bold rounded-xl border-border/60 hover:bg-secondary/40">
           <ChevronLeft className="h-4 w-4" /> Back to Events
         </Button>
       </div>
@@ -205,33 +227,33 @@ export default function EventDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Event Details Header */}
-          <Card className="border-border/40 shadow-sm overflow-hidden bg-card/45 backdrop-blur-sm">
+          <Card className="border-border/30 shadow-md overflow-hidden bg-card/60 backdrop-blur-md rounded-2xl">
             <CardContent className="p-6 space-y-4">
-              <h1 className="text-3xl font-extrabold text-foreground tracking-tight">{event.name}</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mt-2">
+              <h1 className="text-3xl font-extrabold text-white tracking-tight">{event.name}</h1>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm text-muted-foreground mt-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span>{formattedDate}</span>
+                  <span className="text-white/95 font-medium">{formattedDate}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span>{event.venue}</span>
+                  <span className="text-white/95 font-medium">{event.venue}</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed pt-2 border-t border-border/40">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pt-4 border-t border-border/20">
                 {event.description}
               </p>
             </CardContent>
           </Card>
 
           {/* Seat Layout Map Card */}
-          <Card className="border-border/40 shadow-sm overflow-hidden bg-card/45 backdrop-blur-sm">
-            <CardHeader className="bg-accent/10 border-b border-border/40">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <Card className="border-border/30 shadow-md overflow-hidden bg-card/60 backdrop-blur-md rounded-2xl">
+            <CardHeader className="bg-secondary/20 border-b border-border/20">
+              <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">
                 <Armchair className="h-5 w-5 text-primary" />
                 <span>Select Your Seats</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Click on available seats to select them. You can select up to 8 seats per order.
               </CardDescription>
             </CardHeader>
@@ -251,22 +273,22 @@ export default function EventDetailPage() {
 
         {/* Right Column - Reservation / Booking Sidebar */}
         <div className="space-y-6">
-          <Card className="border-border/40 shadow-md sticky top-24 bg-card/70 backdrop-blur-md">
-            <CardHeader className="bg-accent/5 border-b border-border/20">
-              <CardTitle className="text-lg font-bold">Booking Summary</CardTitle>
+          <Card className="border border-border/30 shadow-2xl sticky top-24 bg-card/85 backdrop-blur-md rounded-2xl overflow-hidden">
+            <CardHeader className="bg-secondary/20 border-b border-border/20">
+              <CardTitle className="text-lg font-bold text-white">Booking Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               
               {/* Context-aware error alerts inside sidebar */}
               {errorMsg && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="border-destructive/20 bg-destructive/10 text-destructive-foreground">
                   <AlertTitle className="font-bold text-xs">Error</AlertTitle>
                   <AlertDescription className="text-xs">{errorMsg}</AlertDescription>
                 </Alert>
               )}
- 
+
               {conflictMsg && (
-                <Alert variant="destructive" className="animate-in slide-in-from-top duration-300">
+                <Alert variant="destructive" className="animate-in slide-in-from-top duration-300 border-destructive/20 bg-destructive/10 text-destructive-foreground">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle className="font-bold text-xs">Seat Selection Conflict</AlertTitle>
                   <AlertDescription className="text-xs">{conflictMsg}</AlertDescription>
@@ -274,10 +296,10 @@ export default function EventDetailPage() {
               )}
 
               {/* Chosen Seats Badge List */}
-              <div className="space-y-2">
-                <span className="text-sm font-semibold text-muted-foreground block">Selected Seats</span>
+              <div className="space-y-2.5">
+                <span className="text-xs font-bold text-muted-foreground block uppercase tracking-wider">Selected Seats</span>
                 {selectedSeats.length === 0 ? (
-                  <div className="text-sm text-muted-foreground py-6 text-center border border-dashed rounded-lg bg-accent/5 border-border/60">
+                  <div className="text-xs sm:text-sm text-muted-foreground py-6 text-center border border-dashed rounded-xl bg-secondary/15 border-border/60">
                     No seats selected yet.
                   </div>
                 ) : (
@@ -285,7 +307,7 @@ export default function EventDetailPage() {
                     {selectedSeats.map((seat) => (
                       <span
                         key={seat}
-                        className="px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20 text-xs font-bold transition-all duration-150"
+                        className="px-2.5 py-1 rounded-lg bg-brand-pink/15 text-brand-pink border border-brand-pink/25 text-xs font-extrabold transition-all duration-150 shadow-sm"
                       >
                         {seat}
                       </span>
@@ -297,25 +319,25 @@ export default function EventDetailPage() {
               {/* Booking Checkout hold countdown or actions */}
               {reservation ? (
                 // Seat Hold State - active checkout countdown
-                <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900 space-y-4">
+                <div className="p-4 border rounded-xl bg-brand-purple/5 border-brand-purple/25 space-y-4">
                   <ReservationTimer
                     expiresAt={reservation.expiresAt}
                     onExpired={handleReservationExpired}
                   />
 
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
                     Your seats have been temporarily locked. Please click "Confirm Booking" to finalize your purchase before the countdown runs out.
                   </p>
 
-                  <div className="flex flex-col gap-2 pt-2 border-t border-amber-200/50 dark:border-amber-900/50">
+                  <div className="flex flex-col gap-2 pt-3 border-t border-border/20">
                     {/* Total Price details if price per seat is configured */}
-                    <div className="flex justify-between text-sm font-semibold text-foreground py-1 mb-1">
+                    <div className="flex justify-between text-sm font-semibold text-white py-1 mb-1">
                       <span>Total Amount:</span>
-                      <span className="font-bold">₹{totalPrice}</span>
+                      <span className="font-bold text-primary">₹{totalPrice}</span>
                     </div>
                     <Button
                       onClick={handleConfirm}
-                      className="w-full font-bold bg-green-600 hover:bg-green-700 text-white border-green-500 shadow-lg shadow-green-600/10"
+                      className="w-full font-bold bg-green-600 hover:bg-green-700 text-white border-green-500 shadow-lg shadow-green-600/10 rounded-xl h-11 transition-all duration-200"
                       isLoading={isReservationLoading}
                       disabled={
                         !reservation ||
@@ -329,18 +351,18 @@ export default function EventDetailPage() {
                     <Button
                       variant="ghost"
                       onClick={handleCancelReservation}
-                      disabled={isReservationLoading}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      disabled={isReservationLoading || isCancelling}
+                      className="text-xs text-muted-foreground hover:text-white rounded-xl hover:bg-secondary/40 transition-colors"
                     >
-                      Cancel Reservation
+                      {isCancelling ? 'Cancelling…' : 'Cancel Reservation'}
                     </Button>
                   </div>
                 </div>
               ) : (
                 // Dynamic selection actions summary
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {isExpired && (
-                    <Alert variant="destructive" className="animate-in slide-in-from-top duration-300">
+                    <Alert variant="destructive" className="animate-in slide-in-from-top duration-300 border-destructive/20 bg-destructive/10 text-destructive-foreground">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertTitle className="font-bold text-xs">Reservation Expired</AlertTitle>
                       <AlertDescription className="text-xs">
@@ -349,25 +371,25 @@ export default function EventDetailPage() {
                     </Alert>
                   )}
 
-                  <div className="flex flex-col gap-2.5 pt-4 border-t border-border/40 text-sm font-semibold">
+                  <div className="flex flex-col gap-2.5 pt-4 border-t border-border/20 text-xs sm:text-sm font-semibold">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Selected Count:</span>
-                      <span className="text-foreground">{selectedCount} {selectedCount === 1 ? 'Seat' : 'Seats'}</span>
+                      <span className="text-white font-bold">{selectedCount} {selectedCount === 1 ? 'Seat' : 'Seats'}</span>
                     </div>
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span>Price per Seat:</span>
-                      <span className="text-foreground">₹{ticketPrice}</span>
+                      <span className="text-white font-bold">₹{ticketPrice}</span>
                     </div>
-                    <div className="flex items-center justify-between text-base font-bold text-foreground border-t border-dashed pt-3 mt-1">
+                    <div className="flex items-center justify-between text-base font-bold text-white border-t border-dashed border-border/40 pt-3 mt-1">
                       <span>Total Price:</span>
-                      <span className="text-primary">₹{totalPrice}</span>
+                      <span className="text-primary font-extrabold text-lg">₹{totalPrice}</span>
                     </div>
                   </div>
 
                   <Button
                     onClick={handleReserve}
                     disabled={selectedSeats.length === 0}
-                    className="w-full font-bold shadow-md"
+                    className="w-full font-bold shadow-lg shadow-primary/20 rounded-xl h-11 text-white transition-all duration-300"
                     isLoading={isReservationLoading}
                   >
                     Reserve Seats

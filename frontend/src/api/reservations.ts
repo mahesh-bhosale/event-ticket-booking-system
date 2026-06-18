@@ -13,3 +13,12 @@ export async function reserveSeatsApi(
   });
   return response.data;
 }
+
+export async function cancelReservationApi(
+  reservationId: string,
+): Promise<ApiResponse<{ reservationId: string; seatNumbers: string[] }>> {
+  const response = await apiClient.delete<
+    ApiResponse<{ reservationId: string; seatNumbers: string[] }>
+  >(`/reserve/${reservationId}`);
+  return response.data;
+}

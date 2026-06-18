@@ -37,9 +37,9 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
   return (
     <div className="w-full flex flex-col items-center">
       {/* Stage / Screen Area Visual */}
-      <div className="w-full max-w-md flex flex-col items-center mb-10 mt-2">
-        <div className="w-full h-1.5 bg-gradient-to-r from-primary/10 via-primary to-primary/10 rounded-full shadow-lg shadow-primary/30" />
-        <span className="text-[10px] uppercase tracking-[0.25em] font-semibold text-muted-foreground/70 mt-2">
+      <div className="w-full max-w-md flex flex-col items-center mb-12 mt-4 relative">
+        <div className="w-4/5 h-3 border-t-2 border-brand-pink rounded-[50%] opacity-85 filter drop-shadow-[0_0_8px_hsl(var(--brand-purple)/0.55)]" />
+        <span className="text-[9px] uppercase tracking-[0.35em] font-extrabold text-brand-gradient mt-2">
           Stage / Screen
         </span>
       </div>

@@ -5,12 +5,12 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 p-8">
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-pink/10 text-brand-pink text-sm font-medium border border-brand-pink/20">
           🎟️ Coming Soon
         </div>
 
         <h1 className="text-5xl font-bold tracking-tight text-foreground">
-          Sort<span className="text-primary">My</span>Scene
+          Sort<span className="text-brand-gradient">My</span>Scene
         </h1>
 
         <p className="text-lg text-muted-foreground max-w-md">

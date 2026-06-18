@@ -108,3 +108,25 @@ export const reserveSeats = asyncHandler(
     }
   },
 );
+
+/**
+ * DELETE /api/reserve/:reservationId
+ * Protected - Cancel an active reservation and release seats
+ */
+export const cancelReservation = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw ApiError.unauthorized('Authentication required');
+    }
+
+    const { reservationId } = req.params as { reservationId: string };
+    const result = await ReservationService.cancelReservation(userId, reservationId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Reservation cancelled successfully',
+      data: result,
+    });
+  },
+);

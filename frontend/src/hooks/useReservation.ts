@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { reserveSeatsApi } from '../api/reservations';
+import { cancelReservationApi, reserveSeatsApi } from '../api/reservations';
 import { confirmBookingApi } from '../api/bookings';
 import { queryKeys } from '../constants/queryKeys';
 import { getApiErrorMessage } from '../utils/getApiErrorMessage';
@@ -14,13 +14,43 @@ import type { EventDetailsResult } from '../types/event.types';
 
 export class SeatConflictError extends Error {
   public unavailableSeats: string[];
+  public code: 'SEATS_UNAVAILABLE' | 'ACTIVE_RESERVATION' | 'GENERIC_CONFLICT';
 
-  constructor(message: string, unavailableSeats: string[]) {
+  constructor(
+    message: string,
+    unavailableSeats: string[] = [],
+    code: SeatConflictError['code'] = 'GENERIC_CONFLICT',
+  ) {
     super(message);
     this.name = 'SeatConflictError';
     this.unavailableSeats = unavailableSeats;
+    this.code = code;
     Object.setPrototypeOf(this, SeatConflictError.prototype);
   }
+}
+
+function parseReserveConflict(err: unknown): SeatConflictError {
+  if (!axios.isAxiosError(err) || err.response?.status !== 409) {
+    throw err;
+  }
+
+  const data = err.response?.data as {
+    message?: string;
+    data?: { unavailableSeats?: string[] };
+  } | undefined;
+
+  const message = data?.message || 'Unable to reserve the selected seats';
+  const unavailableSeats = data?.data?.unavailableSeats ?? [];
+
+  if (unavailableSeats.length > 0) {
+    return new SeatConflictError(message, unavailableSeats, 'SEATS_UNAVAILABLE');
+  }
+
+  if (message.toLowerCase().includes('active reservation')) {
+    return new SeatConflictError(message, [], 'ACTIVE_RESERVATION');
+  }
+
+  return new SeatConflictError(message, [], 'GENERIC_CONFLICT');
 }
 
 const RESERVATION_STORAGE_KEY = 'sortmyscene_reservation';
@@ -49,19 +79,53 @@ export function useReservation() {
 
   const [isExpired, setIsExpired] = useState<boolean>(false);
 
-  // Clear reservation state (on cancel or hold timeout)
-  const clearReservation = useCallback((expired: boolean = true) => {
-    const eventId = reservation?.eventId;
-    setReservation(null);
-    setIsExpired(expired);
-    sessionStorage.removeItem(RESERVATION_STORAGE_KEY);
+  const resetLocalReservation = useCallback(
+    (expired: boolean) => {
+      const eventId = reservation?.eventId;
+      setReservation(null);
+      setIsExpired(expired);
+      sessionStorage.removeItem(RESERVATION_STORAGE_KEY);
 
-    // Invalidate cached seat details to unlock layout
-    if (eventId) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId) });
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId) });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.events });
+    },
+    [reservation, queryClient],
+  );
+
+  // Clear reservation state locally (after expiry — backend cleanup runs on refetch)
+  const clearReservation = useCallback(
+    (expired: boolean = true) => {
+      resetLocalReservation(expired);
+    },
+    [resetLocalReservation],
+  );
+
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Cancel reservation on server and release seats
+  const cancelReservation = useCallback(async () => {
+    if (!reservation) return;
+
+    const { reservationId, eventId } = reservation;
+    setIsCancelling(true);
+
+    try {
+      const res = await cancelReservationApi(reservationId);
+      if (!res.success) {
+        throw new Error(res.message);
+      }
+
+      resetLocalReservation(false);
+      await queryClient.refetchQueries({ queryKey: queryKeys.event(eventId) });
+      toast.success('Reservation cancelled — seats released');
+    } catch (err) {
+      throw new Error(getApiErrorMessage(err));
+    } finally {
+      setIsCancelling(false);
     }
-    queryClient.invalidateQueries({ queryKey: queryKeys.events });
-  }, [reservation, queryClient]);
+  }, [reservation, resetLocalReservation, queryClient, toast]);
 
   const resetExpired = useCallback(() => {
     setIsExpired(false);
@@ -86,12 +150,7 @@ export function useReservation() {
         return res;
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 409) {
-          const data = err.response?.data as { message?: string; data?: { unavailableSeats?: string[] } } | undefined;
-          const unavailableSeats = data?.data?.unavailableSeats ?? [];
-          throw new SeatConflictError(
-            data?.message || 'Some seats are no longer available',
-            unavailableSeats
-          );
+          throw parseReserveConflict(err);
         }
         throw new Error(getApiErrorMessage(err));
       }
@@ -207,17 +266,18 @@ export function useReservation() {
   );
 
   const isLoading = reserveMutation.isPending || confirmMutation.isPending;
-  const error = reserveMutation.error?.message || confirmMutation.error?.message || null;
 
   return {
     reservation,
     reserveSeats,
     confirmBooking,
+    cancelReservation,
     clearReservation,
     resetExpired,
     isExpired,
     isLoading,
-    error,
+    isCancelling,
+    error: reserveMutation.error?.message || confirmMutation.error?.message || null,
   };
 }
 

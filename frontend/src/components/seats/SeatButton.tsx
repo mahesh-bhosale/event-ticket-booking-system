@@ -24,17 +24,25 @@ export const SeatButton: React.FC<SeatButtonProps> = ({
   // Determine specific status styling
   const buttonStyles = cn(
     // Base Layout & Transition Styles
-    "relative flex items-center justify-center rounded transition-all duration-200",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "relative flex items-center justify-center rounded-lg transition-all duration-300",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     "border font-bold text-[10px] sm:text-xs",
-    "h-7 w-7 sm:h-8 sm:w-8", // Responsive sizes
+    "h-8 w-8 sm:h-9 sm:w-9", // Slightly larger premium touch area
     
-    // Status: Available vs Selected vs Reserved vs Booked
-    status === SeatStatus.AVAILABLE && !isSelected && !disabled && "bg-background border-border text-foreground hover:border-primary hover:bg-accent cursor-pointer",
-    status === SeatStatus.AVAILABLE && !isSelected && disabled && "bg-background border-border/40 text-muted-foreground/50 cursor-not-allowed",
-    isSelected && "bg-primary border-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-sm shadow-primary/25",
-    status === SeatStatus.RESERVED && "bg-amber-100 dark:bg-amber-950/40 border-amber-400 dark:border-amber-900 text-amber-700 dark:text-amber-300 cursor-not-allowed",
-    status === SeatStatus.BOOKED && "bg-muted border-muted-foreground/10 text-muted-foreground/60 cursor-not-allowed"
+    // Available — ready to select (green)
+    status === SeatStatus.AVAILABLE && !isSelected && !disabled &&
+      "bg-seat-available border-2 border-seat-available-border text-seat-available-text hover:border-brand-pink hover:text-white hover:bg-brand-pink/15 hover:shadow-brand-glow-sm cursor-pointer",
+    status === SeatStatus.AVAILABLE && !isSelected && disabled &&
+      "bg-seat-available/50 border-2 border-zinc-700 text-zinc-600 cursor-not-allowed opacity-50",
+    // Selected — your selection (pink → purple gradient)
+    isSelected &&
+      "bg-brand-gradient border-2 border-brand-pink text-white hover:opacity-95 cursor-pointer shadow-brand-glow scale-110 z-10",
+    // Reserved — on hold (amber)
+    status === SeatStatus.RESERVED &&
+      "bg-seat-reserved border-2 border-seat-reserved-border text-seat-reserved-text line-through cursor-not-allowed",
+    // Booked — sold out (dark red)
+    status === SeatStatus.BOOKED &&
+      "bg-seat-booked border-2 border-seat-booked-border text-seat-booked-text line-through cursor-not-allowed opacity-80"
   );
 
   // Tooltip description

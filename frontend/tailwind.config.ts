@@ -22,6 +22,27 @@ const config: Config = {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        brand: {
+          pink: 'hsl(var(--brand-pink))',
+          purple: 'hsl(var(--brand-purple))',
+        },
+        seat: {
+          available: {
+            DEFAULT: 'hsl(var(--seat-available-bg))',
+            border: 'hsl(var(--seat-available-border))',
+            text: 'hsl(var(--seat-available-text))',
+          },
+          reserved: {
+            DEFAULT: 'hsl(var(--seat-reserved-bg))',
+            border: 'hsl(var(--seat-reserved-border))',
+            text: 'hsl(var(--seat-reserved-text))',
+          },
+          booked: {
+            DEFAULT: 'hsl(var(--seat-booked-bg))',
+            border: 'hsl(var(--seat-booked-border))',
+            text: 'hsl(var(--seat-booked-text))',
+          },
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',

@@ -8,7 +8,7 @@ export function useEventList(page: number = 1, limit?: number, date?: string) {
   const toast = useAppToast();
 
   const query = useQuery({
-    queryKey: queryKeys.eventList(page),
+    queryKey: queryKeys.eventList(page, date),
     queryFn: async () => {
       try {
         const response = await getEventsApi({ page, limit, date });

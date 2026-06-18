@@ -172,4 +172,61 @@ export class ReservationService {
       }
     }
   }
+
+  /**
+   * Cancels an active reservation and releases all held seats back to AVAILABLE.
+   */
+  public static async cancelReservation(
+    userIdStr: string,
+    reservationIdStr: string,
+  ): Promise<{ reservationId: string; seatNumbers: string[] }> {
+    const userId = new Types.ObjectId(userIdStr);
+    const reservationId = new Types.ObjectId(reservationIdStr);
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const reservation = await Reservation.findOne({
+        _id: reservationId,
+        userId,
+        status: ReservationStatus.ACTIVE,
+      }).session(session);
+
+      if (!reservation) {
+        throw ApiError.notFound('Active reservation not found');
+      }
+
+      await Seat.updateMany(
+        {
+          reservationId: reservation._id,
+          status: SeatStatus.RESERVED,
+        },
+        {
+          $set: {
+            status: SeatStatus.AVAILABLE,
+            reservedBy: null,
+            reservedAt: null,
+            reservationId: null,
+          },
+        },
+        { session },
+      );
+
+      reservation.status = ReservationStatus.CANCELLED;
+      await reservation.save({ session });
+
+      await session.commitTransaction();
+
+      return {
+        reservationId: reservation._id.toString(),
+        seatNumbers: reservation.seatNumbers,
+      };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
 }
