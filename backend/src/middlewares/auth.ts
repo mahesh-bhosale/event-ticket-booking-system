@@ -2,35 +2,33 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { ApiError } from '../utils/ApiError';
+import type { AccessTokenPayload, AuthenticatedUser } from '../types/auth.types';
 
 // ─────────────────────────────────────────────────────────────
-//  Types
+//  Extend Express Request with typed auth context
 // ─────────────────────────────────────────────────────────────
-export interface JwtPayload {
-  sub: string;       // userId
-  email: string;
-  role: string;
-  iat?: number;
-  exp?: number;
-}
-
-// Extend Express Request to carry the authenticated user
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      /** Populated by `authenticate` middleware — never contains passwordHash */
+      user?: AuthenticatedUser;
     }
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Auth Middleware
+//  authenticate — JWT Bearer Verification
 // ─────────────────────────────────────────────────────────────
 
 /**
- * Verifies the Bearer JWT in the Authorization header.
- * Attaches the decoded payload to `req.user`.
+ * Extracts and verifies the Bearer JWT from the Authorization header.
+ * On success attaches `{ userId, email, role }` to `req.user`.
+ *
+ * Forwards:
+ *   - 401 if header is missing / malformed
+ *   - 401 if token is expired
+ *   - 401 if token is invalid
  */
 export function authenticate(
   req: Request,
@@ -47,24 +45,34 @@ export function authenticate(
   const token = authHeader.slice(7);
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    req.user = decoded;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
+
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
     next();
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
-      next(ApiError.unauthorized('Access token expired'));
+      next(ApiError.unauthorized('Token expired'));
       return;
     }
-    next(ApiError.unauthorized('Invalid access token'));
+    next(ApiError.unauthorized('Invalid token'));
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+//  authorize — Role-Based Access Control Guard
+// ─────────────────────────────────────────────────────────────
+
 /**
- * Role-based access control guard.
- * Must be used AFTER `authenticate`.
+ * Must be used **after** `authenticate`.
+ * Rejects the request if `req.user.role` is not in the allowed list.
  *
  * @example
- * router.delete('/events/:id', authenticate, authorize('admin'), handler);
+ * router.delete('/events/:id', authenticate, authorize('ADMIN'), handler);
  */
 export function authorize(...roles: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {

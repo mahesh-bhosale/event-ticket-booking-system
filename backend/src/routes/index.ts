@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRouter from './authRoutes';
 
 // ─────────────────────────────────────────────────────────────
 //  Route Aggregator
@@ -20,13 +21,13 @@ router.get('/health', (_req, res) => {
   });
 });
 
-// ── Domain Routes (add as features are implemented) ──────────
-// import { authRouter } from './auth.routes';
-// import { eventRouter } from './event.routes';
-// import { bookingRouter } from './booking.routes';
-// import { userRouter } from './user.routes';
+// ── Domain Routes ─────────────────────────────────────────────
+router.use('/auth', authRouter);
 
-// router.use('/auth', authRouter);
+// Future routes (uncomment as features are implemented):
+// import { eventRouter } from './eventRoutes';
+// import { bookingRouter } from './bookingRoutes';
+// import { userRouter } from './userRoutes';
 // router.use('/events', eventRouter);
 // router.use('/bookings', bookingRouter);
 // router.use('/users', userRouter);

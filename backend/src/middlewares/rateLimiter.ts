@@ -20,12 +20,12 @@ export const globalRateLimiter = rateLimit({
 });
 
 // ─────────────────────────────────────────────────────────────
-//  Auth Route Rate Limiter (stricter)
-//  10 requests per 15 minutes per IP
+//  Auth Route Rate Limiter (strict)
+//  5 requests per 15 minutes per IP (register / login / refresh)
 // ─────────────────────────────────────────────────────────────
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: {
