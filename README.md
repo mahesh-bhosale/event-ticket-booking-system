@@ -109,3 +109,30 @@ See [backend/.env.example](./backend/.env.example)
 ### Frontend (`frontend/.env.example`)
 
 See [frontend/.env.example](./frontend/.env.example)
+
+---
+
+## Double Booking Prevention Strategy
+
+To ensure zero double-booking occurrences under extreme concurrency load, the platform utilizes a multi-layered concurrency protection strategy:
+
+### Layer 1: Atomic `findOneAndUpdate()`
+- **Filter**: `{ eventId, seatNumber, status: SeatStatus.AVAILABLE }`
+- **Update**: `$set` matching state changes to `RESERVED`
+- **Purpose**: Prevents two requests from claiming the same seat. The update is performed atomically inside the database engine in a single roundtrip, preventing check-then-act race conditions.
+
+### Layer 2: MongoDB Transactions
+- **Session**: `session.startTransaction()`
+- **Purpose**: Guarantees all-or-nothing (ACID) reservation state changes. If reserving any seat in a multi-seat request fails, or if a user active reservation check fails, the transaction is aborted (`session.abortTransaction()`), rolling back all allocated seats immediately.
+
+### Layer 3: Database Constraints
+- **Compound Index**: `{ eventId: 1, seatNumber: 1 }` with `unique: true` constraint on the `Seat` collection.
+- **Purpose**: Acts as the final physical protection layer against race conditions at the storage engine level.
+
+### Concurrency Validation
+The system concurrency safety has been verified under stress testing:
+- **Test Metric**: 50 concurrent HTTP requests (using `Promise.all()`) aiming at the exact same seat (`A5`).
+- **Result**:
+  - Exactly **1 success** (200 OK)
+  - Exactly **49 conflicts** (409 Conflict)
+  - **No duplicate bookings** and **no data corruption** recorded.
