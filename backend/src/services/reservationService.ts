@@ -5,6 +5,7 @@ import { Reservation, ReservationStatus } from '../models/Reservation';
 import { SeatStatus } from '../types/seat.types';
 import { ApiError } from '../utils/ApiError';
 import type { ReserveSeatsResult } from '../types/reservation.types';
+import { cleanupExpiredReservations } from './reservationCleanupService';
 
 // ─────────────────────────────────────────────────────────────
 //  Custom Conflict Error Class
@@ -46,6 +47,9 @@ export class ReservationService {
       session.startTransaction();
 
       try {
+        // Run cleanup for expired reservations of this event before checking seat availability
+        await cleanupExpiredReservations({ eventId, session });
+
         // ── Step 1: Validate event exists and is active ──────────
         const event = await Event.findById(eventId).session(session).lean();
         if (!event) {
@@ -123,6 +127,20 @@ export class ReservationService {
         if (!reservation) {
           throw ApiError.internal('Failed to create reservation document');
         }
+
+        // Link the reserved seats to the reservation document
+        await Seat.updateMany(
+          {
+            _id: { $in: seatIds },
+            status: SeatStatus.RESERVED,
+          },
+          {
+            $set: {
+              reservationId: reservation._id,
+            },
+          },
+          { session }
+        );
 
         // ── Step 5: Commit Transaction ───────────────────────────
         await session.commitTransaction();

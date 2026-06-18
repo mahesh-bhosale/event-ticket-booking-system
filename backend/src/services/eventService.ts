@@ -9,6 +9,7 @@ import type {
   MappedEvent,
   SeatResponse,
 } from '../types/event.types';
+import { cleanupExpiredReservations } from './reservationCleanupService';
 
 export class EventService {
   /**
@@ -112,7 +113,10 @@ export class EventService {
 
     const eventId = new Types.ObjectId(eventIdStr);
 
-    // 2. Fetch the event
+    // 2. Run cleanup of expired reservations for this event before fetching seats
+    await cleanupExpiredReservations({ eventId });
+
+    // 3. Fetch the event
     // Hits index: _id_
     const event = await Event.findById(eventId).lean();
     if (!event) {

@@ -136,3 +136,34 @@ The system concurrency safety has been verified under stress testing:
   - Exactly **1 success** (200 OK)
   - Exactly **49 conflicts** (409 Conflict)
   - **No duplicate bookings** and **no data corruption** recorded.
+
+---
+
+## Reservation Expiration Strategy
+
+To ensure database consistency and prevent seats from remaining permanently locked in a `RESERVED` state after a reservation expires, the platform employs a three-layer expiration strategy:
+
+### Layer 1: Synchronous Expiry Validation
+- **Trigger**: During the booking confirmation flow.
+- **Rule**: `expiresAt > currentTime`.
+- **Purpose**: Prevents confirming booking for any expired reservations. If expired, it triggers a seat release and transitions the reservation status to `EXPIRED` synchronously.
+
+### Layer 2: MongoDB TTL Index
+- **Index**: `{ expiresAt: 1 }` with `{ expireAfterSeconds: 0 }` on the `Reservation` collection.
+- **Purpose**: Automatically removes expired reservation documents from the database in the background.
+- **Important**: MongoDB TTL execution is asynchronous and runs on a background thread (usually once every 60 seconds). Therefore, deletion may be delayed by several minutes after the exact expiration timestamp has passed.
+
+### Layer 3: Application-Level Lazy Cleanup
+- **Trigger**: Executes automatically before querying seat availability during:
+  - Event details/seat fetching (`GET /api/events/:id`)
+  - Seat reservation requests (`POST /api/reserve`)
+- **Optimization**: Event-scoped cleanup (only filters and releases seats for the current event) to maintain low latency (under 200ms).
+- **Purpose**: Guarantees that expired seats are released immediately as soon as a user interacts with the system, preventing delayed releases from blocking new buyers.
+
+### Why TTL Alone Is Not Enough
+MongoDB's TTL index mechanism only deletes documents from the target collection (`reservations`). It is completely unaware of application-level references and relations. Specifically, TTL does NOT:
+1. Update referencing documents in other collections (e.g., transitioning `Seat` documents from `RESERVED` back to `AVAILABLE`).
+2. Release locks or clear fields like `reservedBy`, `reservedAt`, and `reservationId` on referencing documents.
+3. Cascade changes or trigger application-level side effects.
+
+Without **Layer 3 (Application-Level Lazy Cleanup)**, seats held by expired reservations would remain locked in a `RESERVED` state forever once the reservation document is deleted by the TTL index, causing permanent inventory leakage. This hybrid architecture guarantees immediate consistency, transaction safety, and high performance.

@@ -71,6 +71,7 @@ export class BookingService {
                 status: SeatStatus.AVAILABLE,
                 reservedBy: null,
                 reservedAt: null,
+                reservationId: null,
               },
             },
             { session },

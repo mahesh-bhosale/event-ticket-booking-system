@@ -71,7 +71,6 @@ const reservationSchema = new Schema<ReservationDocument, ReservationModel>(
       type: String,
       unique: true,
       sparse: true,
-      default: null,
     },
 
     bookedAt: {
