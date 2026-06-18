@@ -10,11 +10,11 @@ import type { ReserveSeatsResult } from '../types/reservation.types';
 //  Custom Conflict Error Class
 // ─────────────────────────────────────────────────────────────
 
-export class SeatReservationError extends Error {
+export class SeatReservationError extends ApiError {
   public readonly unavailableSeats: string[];
 
   constructor(unavailableSeats: string[]) {
-    super('Some seats are no longer available');
+    super(409, 'Some seats are no longer available', unavailableSeats);
     this.name = 'SeatReservationError';
     this.unavailableSeats = unavailableSeats;
   }
@@ -73,7 +73,7 @@ export class ReservationService {
         const seatIds: Types.ObjectId[] = [];
 
         for (const seatNumber of seatNumbers) {
-          // Atomic findOneAndUpdate ensures concurrency protection
+          // Atomic findOneAndUpdate ensures concurrency protection using explicit $set
           const updatedSeat = await Seat.findOneAndUpdate(
             {
               eventId,
@@ -81,9 +81,11 @@ export class ReservationService {
               status: SeatStatus.AVAILABLE,
             },
             {
-              status: SeatStatus.RESERVED,
-              reservedBy: userId,
-              reservedAt: new Date(),
+              $set: {
+                status: SeatStatus.RESERVED,
+                reservedBy: userId,
+                reservedAt: new Date(),
+              },
             },
             { session, new: true },
           );
@@ -95,8 +97,8 @@ export class ReservationService {
           }
         }
 
-        // If any requested seat is unavailable, we abort the entire operation
-        if (unavailableSeats.length > 0) {
+        // Verify: updated seats length matches requested seats length
+        if (seatIds.length !== seatNumbers.length) {
           throw new SeatReservationError(unavailableSeats);
         }
 

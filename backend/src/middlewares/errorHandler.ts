@@ -43,13 +43,16 @@ export function errorHandler(
 
   // ── Mongoose Duplicate Key ────────────────────────────────
   const mongoErr = err as MongoError;
-  if (mongoErr.code === 11000 && mongoErr.keyValue) {
-    const field = Object.keys(mongoErr.keyValue)[0] ?? 'field';
+  if (mongoErr.code === 11000) {
+    logger.error('Duplicate key error conflict:', {
+      message: mongoErr.message,
+      keyValue: mongoErr.keyValue,
+      index: (mongoErr as any).indexName || 'unknown_index',
+    });
+
     res.status(409).json({
       success: false,
-      statusCode: 409,
-      message: `Duplicate value for ${field}`,
-      errors: [`${field} already exists`],
+      message: 'Duplicate resource conflict',
     });
     return;
   }
