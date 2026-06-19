@@ -33,6 +33,9 @@ router.use('/reserve', reservationRouter);
 import { bookingRouter } from './bookingRoutes';
 router.use('/bookings', bookingRouter);
 
+import { adminRouter } from './adminRoutes';
+router.use('/admin', adminRouter);
+
 // Future routes (uncomment as features are implemented):
 // import { userRouter } from './userRoutes';
 // router.use('/users', userRouter);

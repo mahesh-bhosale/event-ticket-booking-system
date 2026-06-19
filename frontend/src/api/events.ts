@@ -6,13 +6,13 @@ export async function getEventsApi(filters: {
   page?: number;
   limit?: number;
   date?: string;
-} = {}): Promise<ApiResponse<{ events: MappedEvent[] }>> {
+} = {}): Promise<ApiResponse<{ events: MappedEvent[], pagination: any }>> {
   const params = new URLSearchParams();
   if (filters.page) params.append('page', String(filters.page));
   if (filters.limit) params.append('limit', String(filters.limit));
   if (filters.date) params.append('date', filters.date);
 
-  const response = await apiClient.get<ApiResponse<{ events: MappedEvent[] }>>('/events', { params });
+  const response = await apiClient.get<ApiResponse<{ events: MappedEvent[], pagination: any }>>('/events', { params });
   return response.data;
 }
 

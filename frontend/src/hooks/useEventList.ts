@@ -8,7 +8,7 @@ export function useEventList(page: number = 1, limit?: number, date?: string) {
   const toast = useAppToast();
 
   const query = useQuery({
-    queryKey: queryKeys.eventList(page, date),
+    queryKey: queryKeys.eventList(page, limit, date),
     queryFn: async () => {
       try {
         const response = await getEventsApi({ page, limit, date });
@@ -29,7 +29,7 @@ export function useEventList(page: number = 1, limit?: number, date?: string) {
 
   return {
     events: query.data?.data?.events ?? [],
-    pagination: query.data?.meta ?? null,
+    pagination: query.data?.data?.pagination ?? null,
     isLoading: query.isLoading,
     error: query.error ? query.error.message : null,
     refetch: query.refetch,

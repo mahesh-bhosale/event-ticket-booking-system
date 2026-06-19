@@ -12,6 +12,11 @@ const EventDetailPage = lazy(() => import('../pages/EventDetailPage'));
 const BookingSuccessPage = lazy(() => import('../pages/BookingSuccessPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 
+// Admin Pages
+const AdminRoute = lazy(() => import('../components/common/AdminRoute'));
+const AdminEventListPage = lazy(() => import('../pages/admin/AdminEventListPage'));
+const AdminEventFormPage = lazy(() => import('../pages/admin/AdminEventFormPage'));
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -49,6 +54,38 @@ export function AppRoutes() {
                 <BookingSuccessPage />
               </AppShell>
             </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Admin Routes */}
+        <Route
+          path="/admin/events"
+          element={
+            <AdminRoute>
+              <AppShell>
+                <AdminEventListPage />
+              </AppShell>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/events/create"
+          element={
+            <AdminRoute>
+              <AppShell>
+                <AdminEventFormPage />
+              </AppShell>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/events/:id/edit"
+          element={
+            <AdminRoute>
+              <AppShell>
+                <AdminEventFormPage />
+              </AppShell>
+            </AdminRoute>
           }
         />
 

@@ -43,3 +43,30 @@ export const eventIdParamSchema = Joi.object({
       'any.required': 'Event ID is required',
     }),
 });
+
+export const createEventSchema = Joi.object({
+  name: Joi.string().trim().max(200).required(),
+  description: Joi.string().trim().max(1000).required(),
+  venue: Joi.string().trim().max(200).required(),
+  dateTime: Joi.date().iso().greater('now').required(),
+  totalSeats: Joi.number().valid(80).required().messages({
+    'any.only': 'Total seats must be exactly 80 for this application',
+  }),
+  image: Joi.string().uri().max(2048).required(),
+  category: Joi.string().trim().max(100).optional(),
+  price: Joi.number().min(0).optional(),
+  location: Joi.string().trim().max(200).optional(),
+  isActive: Joi.boolean().default(true),
+});
+
+export const updateEventSchema = Joi.object({
+  name: Joi.string().trim().max(200).optional(),
+  description: Joi.string().trim().max(1000).optional(),
+  venue: Joi.string().trim().max(200).optional(),
+  dateTime: Joi.date().iso().greater('now').optional(),
+  image: Joi.string().uri().max(2048).optional(),
+  category: Joi.string().trim().max(100).optional(),
+  price: Joi.number().min(0).optional(),
+  location: Joi.string().trim().max(200).optional(),
+  isActive: Joi.boolean().optional(),
+});

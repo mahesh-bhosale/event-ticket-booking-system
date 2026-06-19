@@ -21,6 +21,16 @@ export function Navbar() {
         {user && (
           <div className="flex items-center gap-6">
             <div className="hidden sm:flex items-center gap-3 border-r border-border/30 pr-6">
+              {user.role === 'ADMIN' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="mr-2 text-primary border-primary/30 hover:bg-primary/10"
+                >
+                  <Link to="/admin/events">Manage Events</Link>
+                </Button>
+              )}
               <div className="p-2 rounded-xl bg-secondary/80 text-foreground border border-border/40">
                 <UserIcon className="h-4 w-4" />
               </div>
