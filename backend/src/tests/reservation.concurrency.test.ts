@@ -60,6 +60,10 @@ describe('Seat Reservation Concurrency & Integration Tests', () => {
       venue: 'Jest Arena',
       dateTime: futureDate,
       totalSeats: 10,
+      image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800',
+      category: 'Concert',
+      price: 500,
+      location: 'Mumbai',
       isActive: true,
     });
 
@@ -69,6 +73,10 @@ describe('Seat Reservation Concurrency & Integration Tests', () => {
       venue: 'Jest Theatre',
       dateTime: futureDate,
       totalSeats: 10,
+      image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800',
+      category: 'Concert',
+      price: 300,
+      location: 'Pune',
       isActive: false,
     });
 

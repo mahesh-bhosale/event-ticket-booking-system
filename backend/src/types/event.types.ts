@@ -9,6 +9,10 @@ export interface IEvent {
   venue: string;
   dateTime: Date;
   totalSeats: number;
+  image: string;
+  category?: string;
+  price?: number;
+  location?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +25,10 @@ export interface CreateEventDTO {
   venue: string;
   dateTime: Date | string;
   totalSeats: number;
+  image: string;
+  category?: string;
+  price?: number;
+  location?: string;
 }
 
 export interface UpdateEventDTO {
@@ -29,6 +37,10 @@ export interface UpdateEventDTO {
   venue?: string;
   dateTime?: Date | string;
   totalSeats?: number;
+  image?: string;
+  category?: string;
+  price?: number;
+  location?: string;
   isActive?: boolean;
 }
 
@@ -46,6 +58,10 @@ export interface MappedEvent {
   venue: string;
   dateTime: Date;
   totalSeats: number;
+  image: string;
+  category?: string;
+  price?: number;
+  location?: string;
   isActive: boolean;
   availableSeats: number;
   createdAt: Date;
@@ -80,6 +96,10 @@ export interface EventDetailsResult {
     venue: string;
     dateTime: Date;
     totalSeats: number;
+    image: string;
+    category?: string;
+    price?: number;
+    location?: string;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;

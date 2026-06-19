@@ -59,6 +59,10 @@ describe('Reservation Expiry Handling & Automatic Seat Release Tests', () => {
       venue: 'Cleanup Arena 1',
       dateTime: futureDate,
       totalSeats: 5,
+      image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800',
+      category: 'Concert',
+      price: 500,
+      location: 'Mumbai',
       isActive: true,
     });
     activeEvent1 = e1 as typeof activeEvent1;
@@ -69,6 +73,10 @@ describe('Reservation Expiry Handling & Automatic Seat Release Tests', () => {
       venue: 'Cleanup Arena 2',
       dateTime: futureDate,
       totalSeats: 5,
+      image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800',
+      category: 'Concert',
+      price: 300,
+      location: 'Pune',
       isActive: true,
     });
     activeEvent2 = e2 as typeof activeEvent2;

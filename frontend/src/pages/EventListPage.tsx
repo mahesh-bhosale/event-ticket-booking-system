@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { SkeletonGrid } from '../components/common/SkeletonGrid';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Armchair, ChevronLeft, ChevronRight, RefreshCw, Ticket } from 'lucide-react';
+import { Calendar, MapPin, Armchair, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 export default function EventListPage() {
   const [page, setPage] = useState<number>(1);
@@ -105,20 +105,39 @@ export default function EventListPage() {
                 key={event._id}
                 className="group flex flex-col space-y-3.5 bg-transparent border-0 shadow-none hover:translate-y-[-6px] transition-all duration-300"
               >
-                {/* Event Cover Banner Visual */}
-                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gradient-to-br from-brand-pink/20 via-brand-purple/15 to-black border border-border/30 flex items-center justify-center transition-all duration-300 group-hover:border-brand-pink/50 group-hover:shadow-brand-glow-sm">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
-                  <Ticket className="h-10 w-10 text-primary/45 group-hover:scale-110 group-hover:text-primary transition-all duration-300" />
-                  
-                  {/* Date Badge Overlay */}
+                {/* Event Cover Image */}
+                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden border border-border/30 transition-all duration-300 group-hover:border-brand-pink/50 group-hover:shadow-brand-glow-sm">
+                  <img
+                    src={event.image}
+                    alt={event.name}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+                  {/* Category Badge (top-left) */}
+                  {event.category && (
+                    <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-xl bg-brand-pink/90 backdrop-blur-md text-[10px] font-extrabold text-white tracking-widest uppercase shadow-md">
+                      {event.category}
+                    </div>
+                  )}
+
+                  {/* Date Badge Overlay (top-right) */}
                   <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-[10px] font-extrabold text-primary tracking-widest uppercase">
                     {new Date(event.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </div>
 
-                  {/* Available seats pill */}
-                  <div className="absolute bottom-3.5 left-3.5 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white">
+                  {/* Price Badge (bottom-left) */}
+                  {event.price != null && event.price > 0 && (
+                    <div className="absolute bottom-3.5 left-3.5 flex items-center gap-1 px-3 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-white/5 text-xs font-bold text-white">
+                      From <span className="text-primary">₹{event.price.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+
+                  {/* Available seats pill (bottom-right) */}
+                  <div className="absolute bottom-3.5 right-3.5 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/75 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white">
                     <Armchair className="h-3.5 w-3.5 text-primary" />
-                    <span>{event.availableSeats} / {event.totalSeats} Available</span>
+                    <span>{event.availableSeats} / {event.totalSeats}</span>
                   </div>
                 </div>
 
@@ -139,7 +158,9 @@ export default function EventListPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                      <span className="truncate">{event.venue}</span>
+                      <span className="truncate">
+                        {event.venue}{event.location ? `, ${event.location}` : ''}
+                      </span>
                     </div>
                   </div>
                 </div>

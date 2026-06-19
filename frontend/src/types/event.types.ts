@@ -5,6 +5,10 @@ export interface Event {
   venue: string;
   dateTime: string;
   totalSeats: number;
+  image: string;
+  category?: string;
+  price?: number;
+  location?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

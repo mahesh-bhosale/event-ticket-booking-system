@@ -64,43 +64,124 @@ function buildEventSeedData(): Array<{
   venue: string;
   dateTime: Date;
   totalSeats: number;
+  image: string;
+  category: string;
+  price: number;
+  location: string;
   isActive: boolean;
 }> {
   const now = new Date();
 
-  const daysFromNow = (days: number): Date => {
+  const daysFromNow = (days: number, hours = 19, minutes = 0): Date => {
     const d = new Date(now);
     d.setDate(d.getDate() + days);
-    d.setHours(19, 0, 0, 0); // 7 PM
+    d.setHours(hours, minutes, 0, 0);
     return d;
   };
 
   return [
     {
-      name: 'Grand Concert Night',
+      name: 'Room 303',
       description:
-        'An electrifying evening of live music featuring chart-topping artists across multiple genres. Expect unforgettable performances, stunning stage production, and a night to remember.',
-      venue: 'SortMyScene Arena, Mumbai',
-      dateTime: daysFromNow(14),
+        'An electrifying night of underground electronic music featuring AE:M, Bhish, Citizen Kale, Breaking, Chhabb, Sunju Hargun, Monophonik, Revant, and Zequenx.',
+      venue: 'Hylo',
+      dateTime: daysFromNow(7, 18, 0),
       totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&auto=format&fit=crop',
+      category: 'Nightlife',
+      price: 799,
+      location: 'Mumbai',
       isActive: true,
     },
     {
-      name: 'Comedy Extravaganza',
+      name: 'Underhouse Basement Tour 2026 — Jaipur',
       description:
-        'A hilarious comedy show with the best stand-up comedians in the country. Get ready for side-splitting performances that will leave you in stitches all night long.',
-      venue: 'Laughter Club, Pune',
-      dateTime: daysFromNow(21),
+        'The Underhouse Basement Tour brings its signature underground sound to Jaipur. A night of deep beats, raw energy, and immersive vibes at Hotel Clarks Amer.',
+      venue: 'Hotel Clarks Amer',
+      dateTime: daysFromNow(15, 20, 0),
       totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop',
+      category: 'Concert',
+      price: 999,
+      location: 'Jaipur',
       isActive: true,
     },
     {
-      name: 'TechConf 2025',
+      name: 'Underhouse Basement Tour 2026 — Delhi',
       description:
-        'A premier technology conference bringing together the brightest minds in software engineering, AI, and product design. Keynotes, workshops, and networking opportunities await.',
-      venue: 'Innovation Hub, Bengaluru',
-      dateTime: daysFromNow(30),
+        'The Underhouse Basement Tour arrives in Delhi. Expect heavy basslines, underground DJs, and an intimate warehouse atmosphere.',
+      venue: 'To Be Announced',
+      dateTime: daysFromNow(10, 20, 0),
       totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&auto=format&fit=crop',
+      category: 'Concert',
+      price: 999,
+      location: 'Delhi',
+      isActive: true,
+    },
+    {
+      name: 'The Tomatina Festival',
+      description:
+        'Bar Bank brings the iconic La Tomatina straight from Spain to Mumbai — turning your ultimate Zindagi Na Milegi Dobara moment into reality. The city\'s biggest Tomatina festival and an unforgettable day drunch experience.',
+      venue: 'Bar Bank - Juhu',
+      dateTime: daysFromNow(60, 10, 30),
+      totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&auto=format&fit=crop',
+      category: 'Festival',
+      price: 1999,
+      location: 'Mumbai',
+      isActive: true,
+    },
+    {
+      name: 'Habibi Please! ft. Afterall',
+      description:
+        'An evening of eclectic Middle Eastern-infused beats and global sounds featuring Afterall at Opa! Bar & Cafe, Mumbai.',
+      venue: 'Opa! Bar & Cafe',
+      dateTime: daysFromNow(3, 21, 0),
+      totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop',
+      category: 'Nightlife',
+      price: 949,
+      location: 'Mumbai',
+      isActive: true,
+    },
+    {
+      name: 'Qaifiyat — Poetry & Music Night',
+      description:
+        'An intimate evening of poetry and music with Nidhi Narwal & Firdaus ft. Ishaan Nigam. A soulful cultural experience at Dr. C Ashwath Kala Bhavana.',
+      venue: 'Dr. C Ashwath Kala Bhavana, Auditorium',
+      dateTime: daysFromNow(5, 18, 0),
+      totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&auto=format&fit=crop',
+      category: 'Cultural',
+      price: 399,
+      location: 'Bengaluru',
+      isActive: true,
+    },
+    {
+      name: 'The Big Fat Gay Fake Shaadi!',
+      description:
+        'A vibrant celebration of love and identity — a joyful, colorful fake wedding party at The Scene, Mumbai. Presented by That\'s So Gay × The Gay Gaze.',
+      venue: 'The Scene',
+      dateTime: daysFromNow(5, 17, 0),
+      totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop',
+      category: 'Festival',
+      price: 750,
+      location: 'Mumbai',
+      isActive: true,
+    },
+    {
+      name: 'Pride Run 2026 — Bengaluru Front Runners',
+      description:
+        'Annual Pride Run and Walk organized by Bengaluru Front Runners at Sri Chamarajendra Park. Run for pride, equality, and community.',
+      venue: 'Sri Chamarajendra Park',
+      dateTime: daysFromNow(5, 6, 0),
+      totalSeats: 80,
+      image: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800&auto=format&fit=crop',
+      category: 'Sports',
+      price: 100,
+      location: 'Bengaluru',
       isActive: true,
     },
   ];

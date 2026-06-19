@@ -50,7 +50,7 @@ export default function EventDetailPage() {
   const { event, seats, isLoading, error, refetch } = useEventDetails(eventId, !!reservation);
 
   // Seat Price calculation details
-  const ticketPrice = (event as { price?: number } | undefined)?.price ?? 450;
+  const ticketPrice = event?.price ?? 450;
   const totalPrice = ticketPrice * selectedCount;
 
   // Loading skeleton state
@@ -226,6 +226,33 @@ export default function EventDetailPage() {
         {/* Left Column - Event Details, Map and Legend */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Hero Image Banner */}
+          <Card className="border-border/30 shadow-md overflow-hidden bg-card/60 backdrop-blur-md rounded-2xl">
+            <div className="relative aspect-[21/9] w-full overflow-hidden">
+              <img
+                src={event.image}
+                alt={event.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+
+              {/* Category Badge */}
+              {event.category && (
+                <div className="absolute top-4 left-4 px-4 py-1.5 rounded-xl bg-brand-pink/90 backdrop-blur-md text-xs font-extrabold text-white tracking-widest uppercase shadow-lg">
+                  {event.category}
+                </div>
+              )}
+
+              {/* Price Badge */}
+              {event.price != null && event.price > 0 && (
+                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-sm font-bold text-white">
+                  From <span className="text-primary text-lg font-extrabold">₹{event.price.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
           {/* Event Details Header */}
           <Card className="border-border/30 shadow-md overflow-hidden bg-card/60 backdrop-blur-md rounded-2xl">
             <CardContent className="p-6 space-y-4">
@@ -237,12 +264,23 @@ export default function EventDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-white/95 font-medium">{event.venue}</span>
+                  <span className="text-white/95 font-medium">
+                    {event.venue}{event.location ? `, ${event.location}` : ''}
+                  </span>
                 </div>
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pt-4 border-t border-border/20">
                 {event.description}
               </p>
+
+              {/* Category Tags */}
+              {event.category && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <span className="px-3 py-1 rounded-lg bg-secondary/40 text-xs font-semibold text-muted-foreground border border-border/30">
+                    {event.category}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 

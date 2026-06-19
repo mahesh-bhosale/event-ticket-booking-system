@@ -60,6 +60,30 @@ const eventSchema = new Schema<EventDocument, EventModel>(
       },
     },
 
+    image: {
+      type: String,
+      required: [true, 'Event image URL is required'],
+      trim: true,
+      maxlength: [2048, 'Image URL must not exceed 2048 characters'],
+    },
+
+    category: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Category must not exceed 100 characters'],
+    },
+
+    price: {
+      type: Number,
+      min: [0, 'Price cannot be negative'],
+    },
+
+    location: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Location must not exceed 200 characters'],
+    },
+
     isActive: {
       type: Boolean,
       default: true,
