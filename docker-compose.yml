@@ -9,7 +9,7 @@ services:
     # Run MongoDB as a replica set (rs0) to enable multi-document transactions
     command: ["--replSet", "rs0", "--bind_ip_all"]
     healthcheck:
-      test: mongosh --eval "rs.initiate().ok || rs.status().ok"
+      test: mongosh --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}).ok || rs.status().ok"
       interval: 10s
       start_period: 30s
     volumes:
