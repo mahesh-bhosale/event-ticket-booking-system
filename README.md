@@ -26,6 +26,22 @@ SortMyScene aims to provide a seamless, highly concurrent, and reliable event ti
 
 *[Live Demo](https://event-ticket-booking-system-one.vercel.app/)*
 
+## Screenshots
+1. Login Page
+<img width="1920" height="961" alt="image" src="https://github.com/user-attachments/assets/7c79cdf0-e7e6-4122-8edc-4c82d978bcdc" />
+2. Register Page
+<img width="1518" height="933" alt="image" src="https://github.com/user-attachments/assets/b21c2391-1bc3-4b80-8f81-917a92691680" />
+3. Event Listing Page
+<img width="1696" height="940" alt="image" src="https://github.com/user-attachments/assets/627cffc5-1842-4b02-bf10-49429ae068f0" />
+<img width="1845" height="1005" alt="image" src="https://github.com/user-attachments/assets/f38a3422-6e89-4a8f-afcc-3cbb9662ad82" />
+4. Event Details Page
+<img width="1900" height="2255" alt="event-ticket-booking-system-one vercel app_events_6a34c249a6a441fe28daa4ea" src="https://github.com/user-attachments/assets/ac22a0c5-c626-4651-94c1-0557f7bbaa2b" />
+5. Seat Selection Page
+Reservation Timer
+<img width="1912" height="974" alt="image" src="https://github.com/user-attachments/assets/80640252-bece-4d5b-8a0d-26beef202002" />
+<img width="1881" height="917" alt="image" src="https://github.com/user-attachments/assets/afbb8333-a84e-47b8-b37c-bbff92e303f6" />
+6. Successful Booking
+<img width="1777" height="840" alt="image" src="https://github.com/user-attachments/assets/cb8edcfe-68f5-487b-b43d-e525d54428bc" />
 ---
 
 ## 2. Features
