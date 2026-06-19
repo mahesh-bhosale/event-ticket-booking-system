@@ -4,7 +4,7 @@ import { Plus, Edit, Trash2, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { adminApi } from '../../api/admin';
 import { Event } from '../../types/event.types';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 
 export default function AdminEventListPage() {
   const [events, setEvents] = useState<Event[]>([]);

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: sortmyscene-mongodb
+    ports:
+      - "27017:27017"
+    # Run MongoDB as a replica set (rs0) to enable multi-document transactions
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: mongosh --eval "rs.initiate().ok || rs.status().ok"
+      interval: 10s
+      start_period: 30s
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sortmyscene-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/sortmyscene
+      - JWT_SECRET=docker_development_jwt_secret_must_be_32_chars_long
+      - JWT_REFRESH_SECRET=docker_development_refresh_secret_must_be_32_chars_long
+      - CORS_ORIGIN=http://localhost:5173
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Pass the backend URL at build time so Vite embeds it into the compiled JS
+        - VITE_API_URL=http://localhost:5000/api/v1
+    container_name: sortmyscene-frontend
+    ports:
+      # Map 5173 locally to nginx's internal port 80
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
