@@ -32,6 +32,32 @@ export const getEventsQuerySchema = Joi.object({
     .messages({
       'string.pattern.base': 'Date must be in YYYY-MM-DD format',
     }),
+
+  search: Joi.string()
+    .trim()
+    .max(100)
+    .allow('')
+    .optional()
+    .messages({
+      'string.max': 'Search term must not exceed 100 characters',
+    }),
+
+  city: Joi.string()
+    .trim()
+    .max(100)
+    .allow('')
+    .optional()
+    .messages({
+      'string.max': 'City filter must not exceed 100 characters',
+    }),
+
+  sort: Joi.string()
+    .valid('date_asc', 'date_desc', 'name_asc', 'name_desc')
+    .default('date_asc')
+    .optional()
+    .messages({
+      'any.only': 'Sort must be one of: date_asc, date_desc, name_asc, name_desc',
+    }),
 });
 
 export const eventIdParamSchema = Joi.object({

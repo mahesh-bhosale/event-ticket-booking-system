@@ -31,10 +31,15 @@ export interface EventDetailsResult {
   seats: SeatResponse[];
 }
 
+export type EventSortOption = 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc';
+
 export interface EventQueryFilters {
   page?: number;
   limit?: number;
+  search?: string;
+  city?: string;
   date?: string;
+  sort?: EventSortOption;
 }
 
 export interface ReservationResult {

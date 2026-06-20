@@ -45,7 +45,8 @@ Reservation Timer
 7. Admin Feature
 <img width="1894" height="909" alt="image" src="https://github.com/user-attachments/assets/9d242338-2aee-4749-a2ed-f0c82d5ea0fd" />
 <img width="1833" height="940" alt="image" src="https://github.com/user-attachments/assets/c322b30b-26a3-4129-9ab9-81afa8a90a83" />
-<img width="1822" height="947" alt="image" src="https://github.com/user-attachments/assets/b1641ffd-0986-45a2-a4b8-51cee0d12584" />
+8. Booking History Page
+<!-- [Screenshot Placeholder: Booking History Page showing list of user bookings, search, and filters] -->
 
 ---
 
@@ -59,6 +60,11 @@ Reservation Timer
 
 ### Events
 * **Event Listing:** Paginated, highly-performant event discovery.
+* **Event Search:** Case-insensitive partial matching on event names.
+* **City Filtering:** Filter events by venue/city.
+* **Date Filtering:** Filter events by specific date.
+* **Sorting:** Sort by date or name (ascending/descending).
+* **URL-based Filters:** All filters are synced to the URL for shareable links and browser history support.
 * **Event Details:** Deep-dive into event metadata, time, and location.
 * **Seat Availability:** Real-time reflection of seat states (`AVAILABLE`, `LOCKED`, `BOOKED`).
 
@@ -70,6 +76,7 @@ Reservation Timer
 ### Bookings
 * **Confirm Booking:** Atomic conversion of a `LOCKED` reservation to a `BOOKED` state.
 * **Booking Reference Generation:** Unique, cryptographically secure booking references.
+* **Booking History:** Access a paginated lists of past successful bookings, with real-time text search and custom date-range filtering (Last 30 days, Last 90 days, All).
 
 ### Security
 * **JWT Protection:** Standardized Bearer token authorization.
@@ -225,7 +232,7 @@ graph TD
 |---|---|---|---|---|---|
 | `POST` | `/auth/register` | No | Register a new user | `{ name, email, password }` | `{ user, token }` |
 | `POST` | `/auth/login` | No | Login and get token | `{ email, password }` | `{ user, token }` |
-| `GET` | `/events` | No | Get paginated events | N/A | `{ events, totalPages }` |
+| `GET` | `/events` | No | Get paginated events | `?page=1&limit=10&search=&city=&date=&sort=date_asc` | `{ events, pagination, filters }` |
 | `GET` | `/events/:id` | No | Get specific event details | N/A | `{ event }` |
 | `GET` | `/events/:id/seats` | No | Get seat map for event | N/A | `[{ seatNumber, status }]` |
 | `POST` | `/reservations` | Yes | Reserve seats | `{ eventId, seatIds: [] }` | `{ reservation }` |

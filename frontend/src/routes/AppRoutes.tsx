@@ -10,6 +10,7 @@ const RegisterPage = lazy(() => import('../pages/RegisterPage'));
 const EventListPage = lazy(() => import('../pages/EventListPage'));
 const EventDetailPage = lazy(() => import('../pages/EventDetailPage'));
 const BookingSuccessPage = lazy(() => import('../pages/BookingSuccessPage'));
+const BookingHistoryPage = lazy(() => import('../pages/BookingHistoryPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 
 // Admin Pages
@@ -52,6 +53,16 @@ export function AppRoutes() {
             <ProtectedRoute>
               <AppShell>
                 <BookingSuccessPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookings/history"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <BookingHistoryPage />
               </AppShell>
             </ProtectedRoute>
           }

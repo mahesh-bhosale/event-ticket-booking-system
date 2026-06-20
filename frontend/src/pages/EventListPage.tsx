@@ -1,62 +1,179 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useEventList } from '../hooks/useEventList';
+import { useDebounce } from '../hooks/useDebounce';
 
 import { Button } from '@/components/ui/button';
 import { SkeletonGrid } from '../components/common/SkeletonGrid';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { EventSearchBar } from '../components/events/EventSearchBar';
+import { EventFilters } from '../components/events/EventFilters';
+import { EventFilterSheet } from '../components/events/EventFilterSheet';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Armchair, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Calendar, MapPin, Armchair, ChevronLeft, ChevronRight, RefreshCw, SearchX } from 'lucide-react';
+import type { EventSortOption, EventQueryFilters } from '../types/event.types';
 
+// ─────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────
+const VALID_SORTS: EventSortOption[] = ['date_asc', 'date_desc', 'name_asc', 'name_desc'];
+const DEFAULT_SORT: EventSortOption = 'date_asc';
+const LIMIT = 6;
+
+function isValidSort(value: string | null): value is EventSortOption {
+  return value != null && VALID_SORTS.includes(value as EventSortOption);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Component
+// ─────────────────────────────────────────────────────────────
 export default function EventListPage() {
-  const [page, setPage] = useState<number>(1);
-  const limit = 6;
-  const [dateFilter, setDateFilter] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { events, pagination, isLoading, error, refetch } = useEventList(
-    page,
-    limit,
-    dateFilter || undefined
+  // ── Read filter state from URL ──────────────────────────────
+  const urlSearch = searchParams.get('search') ?? '';
+  const urlCity = searchParams.get('city') ?? '';
+  const urlDate = searchParams.get('date') ?? '';
+  const urlSort: EventSortOption = isValidSort(searchParams.get('sort'))
+    ? (searchParams.get('sort') as EventSortOption)
+    : DEFAULT_SORT;
+  const urlPage = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
+
+  // ── Local search state + debounce ───────────────────────────
+  const [localSearch, setLocalSearch] = useState(urlSearch);
+  const debouncedSearch = useDebounce(localSearch, 500);
+
+  // ── Build filters from URL + debounced search ───────────────
+  const filters: EventQueryFilters = useMemo(
+    () => ({
+      page: urlPage,
+      limit: LIMIT,
+      search: debouncedSearch || undefined,
+      city: urlCity || undefined,
+      date: urlDate || undefined,
+      sort: urlSort,
+    }),
+    [urlPage, debouncedSearch, urlCity, urlDate, urlSort],
   );
 
+  const { events, pagination, isLoading, error, refetch } = useEventList(filters);
   const isError = !!error;
   const totalPages = pagination?.totalPages ?? 1;
+  const totalItems = pagination?.totalItems ?? null;
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDateFilter(e.target.value);
-    setPage(1); // Reset to page 1 on filter change
-  };
+  // ── URL update helper ───────────────────────────────────────
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [key, value] of Object.entries(updates)) {
+          if (value) {
+            next.set(key, value);
+          } else {
+            next.delete(key);
+          }
+        }
+        // Reset to page 1 when filters change (unless page itself is being updated)
+        if (!('page' in updates)) {
+          next.delete('page');
+        }
+        return next;
+      }, { replace: true });
+    },
+    [setSearchParams],
+  );
 
-  const handleClearFilter = () => {
-    setDateFilter('');
-    setPage(1);
-  };
+  // ── Filter change handlers ──────────────────────────────────
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setLocalSearch(value);
+      // Sync empty value immediately so the URL clears
+      if (!value) {
+        updateParams({ search: '' });
+      }
+    },
+    [updateParams],
+  );
+
+  const handleSearchCommit = useCallback(
+    (value: string) => {
+      updateParams({ search: value });
+    },
+    [updateParams],
+  );
+
+  const handleCityChange = useCallback(
+    (city: string) => updateParams({ city }),
+    [updateParams],
+  );
+
+  const handleDateChange = useCallback(
+    (date: string) => updateParams({ date }),
+    [updateParams],
+  );
+
+  const handleSortChange = useCallback(
+    (sort: EventSortOption) => updateParams({ sort: sort === DEFAULT_SORT ? '' : sort }),
+    [updateParams],
+  );
+
+  const handleClearAll = useCallback(() => {
+    setLocalSearch('');
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
+
+  const handlePageChange = useCallback(
+    (newPage: number) => updateParams({ page: newPage === 1 ? '' : String(newPage) }),
+    [updateParams],
+  );
+
+  // ── Derived state ───────────────────────────────────────────
+  const hasActiveFilters = !!(urlSearch || urlCity || urlDate || urlSort !== DEFAULT_SORT);
+  const activeFilterCount = [urlCity, urlDate, urlSort !== DEFAULT_SORT ? urlSort : ''].filter(Boolean).length;
+
+  // Sync debounced search back to URL
+  // (useEffect to push debounced value to URL after delay)
+  // This is handled automatically: debouncedSearch feeds into filters → useEventList.
+  // The URL gets the raw search immediately via handleSearchCommit on Enter,
+  // or lazily via the debounced value comparison below.
+  useMemo(() => {
+    if (debouncedSearch !== urlSearch) {
+      updateParams({ search: debouncedSearch });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   return (
-    <div className="space-y-8">
-      {/* Header and Filter Controls */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-border/20 pb-6">
-        <div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-5 border-b border-border/20 pb-6">
+        <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-extrabold tracking-tight text-white">Upcoming Events</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
+          <p className="text-sm text-muted-foreground">
             Choose from a wide variety of live shows and secure your tickets instantly.
           </p>
         </div>
 
+        {/* Search + Mobile Filter Trigger + Refresh */}
         <div className="flex items-center gap-3">
-          <div className="flex flex-col gap-1.5 text-left">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={handleDateChange}
-              className="flex h-10 rounded-xl border border-border/40 bg-secondary/30 px-3.5 py-1.5 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus:ring-2 focus:ring-primary/80 focus:border-primary/80 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
-              aria-label="Filter events by date"
-            />
-          </div>
-          {dateFilter && (
-            <Button variant="outline" size="sm" onClick={handleClearFilter} className="rounded-xl border-border/60 hover:bg-secondary/40 font-semibold">
-              Clear
-            </Button>
-          )}
+          <EventSearchBar
+            value={localSearch}
+            onChange={handleSearchChange}
+            onCommit={handleSearchCommit}
+          />
+
+          <EventFilterSheet
+            city={urlCity}
+            date={urlDate}
+            sort={urlSort}
+            onCityChange={handleCityChange}
+            onDateChange={handleDateChange}
+            onSortChange={handleSortChange}
+            onClearAll={handleClearAll}
+            hasActiveFilters={hasActiveFilters}
+            activeFilterCount={activeFilterCount}
+          />
+
           <Button
             variant="ghost"
             size="icon"
@@ -64,16 +181,38 @@ export default function EventListPage() {
             disabled={isLoading}
             title="Refresh list"
             aria-label="Refresh list"
-            className="rounded-xl hover:bg-secondary/40"
+            className="rounded-xl hover:bg-secondary/40 flex-shrink-0"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
           </Button>
         </div>
+
+        {/* Desktop Filters */}
+        <EventFilters
+          city={urlCity}
+          date={urlDate}
+          sort={urlSort}
+          totalItems={!isLoading && !isError ? totalItems : null}
+          onCityChange={handleCityChange}
+          onDateChange={handleDateChange}
+          onSortChange={handleSortChange}
+          onClearAll={handleClearAll}
+          hasActiveFilters={hasActiveFilters}
+        />
+
+        {/* Mobile result count */}
+        {!isLoading && !isError && totalItems != null && (
+          <span className="md:hidden text-xs text-muted-foreground font-medium tabular-nums">
+            Showing{' '}
+            <span className="text-white font-semibold">{totalItems}</span>{' '}
+            event{totalItems !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* Main Content Area */}
       {isLoading ? (
-        <SkeletonGrid count={limit} />
+        <SkeletonGrid count={LIMIT} />
       ) : isError ? (
         <Alert variant="destructive" className="border-destructive/20 bg-destructive/10 text-destructive-foreground">
           <AlertTitle className="font-bold">Error Loading Events</AlertTitle>
@@ -81,10 +220,24 @@ export default function EventListPage() {
         </Alert>
       ) : events.length === 0 ? (
         <div className="text-center py-16 border border-border/20 rounded-2xl bg-card/10">
-          <p className="text-lg text-muted-foreground">No upcoming events found.</p>
-          {dateFilter && (
-            <Button className="mt-4 font-bold rounded-xl" variant="outline" onClick={handleClearFilter}>
-              View All Events
+          <div className="flex justify-center mb-4">
+            <div className="p-3 rounded-2xl bg-secondary/40">
+              <SearchX className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </div>
+          <p className="text-lg font-semibold text-white mb-1">No events found</p>
+          <p className="text-sm text-muted-foreground mb-5">
+            {hasActiveFilters
+              ? 'Try adjusting your search or filters to find what you\'re looking for.'
+              : 'No upcoming events are currently available.'}
+          </p>
+          {hasActiveFilters && (
+            <Button
+              className="font-bold rounded-xl"
+              variant="outline"
+              onClick={handleClearAll}
+            >
+              Clear All Filters
             </Button>
           )}
         </div>
@@ -183,20 +336,20 @@ export default function EventListPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            disabled={page === 1}
+            onClick={() => handlePageChange(Math.max(urlPage - 1, 1))}
+            disabled={urlPage === 1}
             className="gap-1 font-semibold"
           >
             <ChevronLeft className="h-4 w-4" /> Previous
           </Button>
           <span className="text-sm font-medium text-muted-foreground">
-            Page {page} of {totalPages}
+            Page {urlPage} of {totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-            disabled={page === totalPages}
+            onClick={() => handlePageChange(Math.min(urlPage + 1, totalPages))}
+            disabled={urlPage === totalPages}
             className="gap-1 font-semibold"
           >
             Next <ChevronRight className="h-4 w-4" />

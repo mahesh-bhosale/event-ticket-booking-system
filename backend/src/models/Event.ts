@@ -108,6 +108,15 @@ eventSchema.index(
   { name: 'idx_event_isActive_dateTime' },
 );
 
+/** Name search — supports $regex for event name search */
+eventSchema.index({ name: 1 }, { name: 'idx_event_name' });
+
+/** Venue search — supports $regex for city/venue filter */
+eventSchema.index({ venue: 1 }, { name: 'idx_event_venue' });
+
+/** Location search — supports $regex for city/location filter */
+eventSchema.index({ location: 1 }, { name: 'idx_event_location' });
+
 // ─────────────────────────────────────────────────────────────
 //  Model
 // ─────────────────────────────────────────────────────────────

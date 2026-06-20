@@ -30,6 +30,9 @@ router.use('/events', eventRouter);
 import { reservationRouter } from './reservationRoutes';
 router.use('/reserve', reservationRouter);
 
+import { bookingHistoryRouter } from './bookingHistory.routes';
+router.use('/bookings/history', bookingHistoryRouter);
+
 import { bookingRouter } from './bookingRoutes';
 router.use('/bookings', bookingRouter);
 

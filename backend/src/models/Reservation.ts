@@ -161,6 +161,15 @@ reservationSchema.index(
   { name: 'idx_reservation_userId_eventId_status' },
 );
 
+/**
+ * Compound index for user booking history queries:
+ * Filters by userId and status, then sorts by bookedAt descending.
+ */
+reservationSchema.index(
+  { userId: 1, status: 1, bookedAt: -1 },
+  { name: 'idx_reservation_userId_status_bookedAt' },
+);
+
 // ─────────────────────────────────────────────────────────────
 //  Model
 // ─────────────────────────────────────────────────────────────

@@ -44,11 +44,24 @@ export interface UpdateEventDTO {
   isActive?: boolean;
 }
 
+// ── Sort Options ──────────────────────────────────────────────
+export type EventSortOption = 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc';
+
 // ── Query and Result Interfaces ──────────────────────────────
 export interface EventQueryFilters {
   page?: number;
   limit?: number;
   date?: string;
+  search?: string;
+  city?: string;
+  sort?: EventSortOption;
+}
+
+export interface AppliedFilters {
+  search?: string;
+  city?: string;
+  date?: string;
+  sort: EventSortOption;
 }
 
 export interface MappedEvent {
@@ -78,6 +91,7 @@ export interface PaginatedEventsResult {
     hasNextPage: boolean;
     hasPreviousPage: boolean;
   };
+  filters: AppliedFilters;
 }
 
 export interface SeatResponse {

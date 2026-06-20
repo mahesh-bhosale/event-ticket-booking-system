@@ -4,6 +4,7 @@ import { Seat } from '../models/Seat';
 import { ApiError } from '../utils/ApiError';
 import type {
   EventQueryFilters,
+  EventSortOption,
   PaginatedEventsResult,
   EventDetailsResult,
   MappedEvent,
@@ -13,22 +14,68 @@ import { cleanupExpiredReservations } from './reservationCleanupService';
 
 export class EventService {
   /**
-   * Fetch all active events with pagination and count of available seats.
-   * Uses an optimized aggregation pipeline to prevent N+1 queries.
+   * Escape special regex characters in user input to prevent ReDoS attacks.
+   */
+  private static escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Map a sort option string to a MongoDB $sort stage object.
+   */
+  private static buildSortStage(sort: EventSortOption): Record<string, 1 | -1> {
+    switch (sort) {
+      case 'date_desc':
+        return { dateTime: -1 };
+      case 'name_asc':
+        return { name: 1 };
+      case 'name_desc':
+        return { name: -1 };
+      case 'date_asc':
+      default:
+        return { dateTime: 1 };
+    }
+  }
+
+  /**
+   * Fetch all active events with pagination, search, city filter, date filter,
+   * and sorting. Uses an optimized aggregation pipeline to prevent N+1 queries.
    */
   public static async getAllEvents(filters: EventQueryFilters): Promise<PaginatedEventsResult> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
+    const sort: EventSortOption = filters.sort ?? 'date_asc';
 
-    // Build the query matching active events (and date range if specified)
+    // Build the query matching active events
     const matchQuery: Record<string, unknown> = { isActive: true };
 
+    // ── Search filter (case-insensitive partial match on event name) ──
+    if (filters.search && filters.search.trim()) {
+      const escaped = EventService.escapeRegex(filters.search.trim());
+      matchQuery['name'] = { $regex: escaped, $options: 'i' };
+    }
+
+    // ── City filter (case-insensitive partial match on location) ──────
+    if (filters.city && filters.city.trim()) {
+      let citySearch = filters.city.trim();
+      // Map Bangalore to Bengaluru to support either naming variation in seed
+      if (citySearch.toLowerCase() === 'bangalore') {
+        citySearch = 'bengaluru';
+      }
+      const escaped = EventService.escapeRegex(citySearch);
+      matchQuery['location'] = { $regex: escaped, $options: 'i' };
+    }
+
+    // ── Date filter (events occurring on a specific day) ─────────────
     if (filters.date) {
       // YYYY-MM-DD input is parsed to cover the entire day in UTC
       const startOfDay = new Date(`${filters.date}T00:00:00.000Z`);
       const endOfDay = new Date(`${filters.date}T23:59:59.999Z`);
       matchQuery['dateTime'] = { $gte: startOfDay, $lte: endOfDay };
     }
+
+    // ── Sort stage ───────────────────────────────────────────────────
+    const sortStage = EventService.buildSortStage(sort);
 
     // 1. Get total items matching criteria for pagination metadata.
     // Hits index: idx_event_isActive_dateTime (or its prefix)
@@ -40,7 +87,7 @@ export class EventService {
     // saving significant database execution and memory.
     const events = await Event.aggregate<MappedEvent>([
       { $match: matchQuery },
-      { $sort: { dateTime: 1 } },
+      { $sort: sortStage },
       { $skip: (page - 1) * limit },
       { $limit: limit },
       {
@@ -102,6 +149,12 @@ export class EventService {
         totalPages,
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
+      },
+      filters: {
+        search: filters.search || undefined,
+        city: filters.city || undefined,
+        date: filters.date || undefined,
+        sort,
       },
     };
   }

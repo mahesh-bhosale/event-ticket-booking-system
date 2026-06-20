@@ -21,6 +21,14 @@ export function Navbar() {
         {user && (
           <div className="flex items-center gap-6">
             <div className="hidden sm:flex items-center gap-3 border-r border-border/30 pr-6">
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="mr-2 text-muted-foreground hover:text-white hover:bg-secondary/40 font-semibold rounded-lg"
+              >
+                <Link to="/bookings/history">Booking History</Link>
+              </Button>
               {user.role === 'ADMIN' && (
                 <Button
                   variant="outline"
