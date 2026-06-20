@@ -42,6 +42,8 @@ Reservation Timer
 <img width="1881" height="917" alt="image" src="https://github.com/user-attachments/assets/afbb8333-a84e-47b8-b37c-bbff92e303f6" />
 6. Successful Booking
 <img width="1777" height="840" alt="image" src="https://github.com/user-attachments/assets/cb8edcfe-68f5-487b-b43d-e525d54428bc" />
+<img width="1739" height="909" alt="image" src="https://github.com/user-attachments/assets/daac7c8c-6d73-45f7-ac34-c94915342902" />
+
 7. Admin Feature
 <img width="1894" height="909" alt="image" src="https://github.com/user-attachments/assets/9d242338-2aee-4749-a2ed-f0c82d5ea0fd" />
 <img width="1833" height="940" alt="image" src="https://github.com/user-attachments/assets/c322b30b-26a3-4129-9ab9-81afa8a90a83" />
